@@ -1,0 +1,25 @@
+Ran Test number 1  --->  Subsonic flow over a smooth bump
+  __________Report__________   
+ ---------- Inviscid Test case: Smooth Bump ---------- 
+ Expected Change in entropy           : 0.000E+00
+ Calculated relative change in entropy: 1.046E-06
+ Difference                           : 1.046E-04 %
+------------ >>> Test Passed  <<< --------------
+
+
+Ran Test number 2  --->  Laminar flow over a flat plate
+  __________Report__________   
+ ------ Laminar Test case: Flat plate ------ 
+ Expected drag coeffcient    : 1.330E-03
+ Calculated drag coefficient : 1.329E-03
+ Difference                  : 4.638E-02 %
+------------ >>> Test Passed  <<< --------------
+
+
+Ran Test number 3  --->  Turbulent flow over a flat plate
+  __________Report__________   
+ ------ Turbulent Test case: Flat plate ------ 
+ Expected drag coeffcient    : 2.960E-03
+ Calculated drag coefficient : 2.966E-03
+ Difference                  : 1.883E-01 %
+------------ >>> Test Passed  <<< --------------
