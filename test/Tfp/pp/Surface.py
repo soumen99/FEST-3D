@@ -86,10 +86,8 @@ class Stress:
             pass
         ExpectedDragCoeff = 0.00296
         f = open('surfaceData.dat', 'ab')
-        Intf = open('IntsurfaceData.txt', 'ab')
         headerSurfaceData = "variables=X REX CF"
         f.write(headerSurfaceData+'\n')
-        Intf.write("cd    cl\n")
         for block,  value in self.BCList.items():
             for face, BC in value.items():
                 if BC==-5:
@@ -143,7 +141,6 @@ class Stress:
                     Rex = self.RhoRef*self.Velocity*x/self.MuRef
                     #np.savetxt(f, np.c_[x, Rex, cp, cf_x, cf_y], delimiter="  ")
                     np.savetxt(f, np.c_[x, Rex, cf_x], delimiter="  ")
-        Intf.write(str(sum(cd)/(2*0.04)) + ' '+str(sum(cl)))
         CD = sum(cd)/(2*0.04)
         Difference = np.abs((ExpectedDragCoeff-CD)*100/ExpectedDragCoeff)
         print " ------ Turbulent Test case: Flat plate ------ "

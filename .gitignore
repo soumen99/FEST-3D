@@ -16,7 +16,7 @@ files
 *.dat
 
 #Boundary_condition files
-bc_*.md
+#bc_*.md
 
 #Paper file
 paper/paper.pdf

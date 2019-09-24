@@ -1,6 +1,5 @@
 import os
 from subprocess import call
-import geometry
 
 def run(case,f):
     os.chdir(case)
@@ -12,8 +11,8 @@ if __name__=="__main__":
     print " "
     print "  ----- Integrated Tests Started -----  "
     print "Total two processes will be used with MPICH library"
-    with open("make.log") as f:
-        call(['make'], stdout=f, stderr=f)
+    with open("make.log", 'w+') as f:
+        call(['make', 'all'], stdout=f, stderr=f)
     with open("Report.txt", "w+") as f:
         print "Running Test number 1  --->  Subsonic flow over a smooth bump"
         run('SmoothBump',f)
