@@ -146,7 +146,7 @@ class Stress:
         print " ------ Laminar Test case: Flat plate ------ "
         print " Expected drag coeffcient    : "+ "{:.3E}".format(0.00133)
         print " Calculated drag coefficient : "+ "{:.3E}".format(CD)
-        print " Difference                  : "+ "{:.3E}".format(Difference) + " %"
+        print " Difference (Expected < 1%)  : "+ "{:.3E}".format(Difference) + " %"
         if Difference < 1:
             print "------------ >>> Test Passed  <<< --------------"
         else:

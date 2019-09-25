@@ -146,7 +146,7 @@ class Stress:
         print " ------ Turbulent Test case: Flat plate ------ "
         print " Expected drag coeffcient    : "+ "{:.3E}".format(ExpectedDragCoeff)
         print " Calculated drag coefficient : "+ "{:.3E}".format(CD)
-        print " Difference                  : "+ "{:.3E}".format(Difference) + " %"
+        print " Difference (Expected < 2%)  : "+ "{:.3E}".format(Difference) + " %"
         if Difference < 2:
             print "------------ >>> Test Passed  <<< --------------"
         else:

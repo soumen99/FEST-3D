@@ -29,7 +29,7 @@ def Getentropy(Filenames,Database, Input):
     print " ---------- Inviscid Test case: Smooth Bump ---------- "
     print " Expected Change in entropy           : " + "{:.3E}".format(0.0)
     print " Calculated relative change in entropy: " + "{:.3E}".format(Ds)
-    print " Difference                           : " + "{:.3E}".format(Ds*100) + " %"
+    print " Difference (Expected less than 0.1%) : " + "{:.3E}".format(Ds*100) + " %"
     if Ds < 1e-3:
         print "------------ >>> Test Passed  <<< --------------"
     else:
