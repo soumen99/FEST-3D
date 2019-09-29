@@ -14,7 +14,7 @@ if [ -f $ex ]; then
     python main.py
     cd ..
     rm -r time_directories/0000
-#    rm -r time_directories/0001
+    rm -r time_directories/0001
     rm -r time_directories/aux/out
     rm -r time_directories/aux/resnorm
     touch time_directories/aux/resnorm
