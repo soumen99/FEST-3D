@@ -26,4 +26,4 @@ if __name__=="__main__":
     FaceData = Surface.Boundary(FileNames, Database).FaceData
     stress   = Surface.Stress(FaceData,Input,nDrag,nLift,nSide)
     #write data
-    stress.WriteForces()
+    stress.WriteForces(Input)

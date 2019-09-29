@@ -5,7 +5,7 @@ Control File
 3000.0
 
 ## Restart level
-0
+2
 
 ## Maximum Iterations
 10000
