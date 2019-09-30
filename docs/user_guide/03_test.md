@@ -1,10 +1,10 @@
 title: Test
 
-Since it is not possible to perform unit test with the current status of FEST-3D,
+Since it is not possible to perform unit tests with the current status of FEST-3D,
 we have defined a few integrated test cases. Using this integrated method, 
 you can test the implementation of various flux-schemes, higher-order methods, and turbulence models.
-Any new scheme added to the FEST-3D can also be tested using the same framework.
-A python script, `Test.py`, provided in the `test/` directory to run the integrated test
+Any new scheme added to FEST-3D can also be tested using the same framework.
+A python script, `Test.py`, is provided in the `test/` directory to run the integrated tests
 with a particular flux scheme, higher-order method, and turbulence model.
 Use the following command to run all tests in the `test/` directory.
 
@@ -65,20 +65,24 @@ The integrated tests use two processes with MPICH library. Three different test 
 
 | S.No.&nbsp;&nbsp;&nbsp; 	| Test case &nbsp;&nbsp;&nbsp;	| Expected value &nbsp;&nbsp;&nbsp; | Tolereance % 	|
 |:-------	:|:-----------	|:------------------------------	|:------------	:|
-| 1     	| Inviscid  	| Change in entropy = 0.0      	| 0.1%       	|
+| 1     	| Inviscid  	| Change in entropy = 0.0%      	| 0.1%       	|
 | 2.    	| Laminar   	| Cofficient of drag = 0.00133 	| 1%         	|
 | 3.    	| Turbulent 	| Cofficient of drag = 0.00290 	| 2%         	|
 
 
-The change in entropy is calculated using following expression:
+The percentage change or error(Tolerance) in entropy is calculated using following expression:
 <figure>
   <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items:center">
     <img src="|media|/error.png" alt="Domain" style="width:250px">
   </div>
 </figure>
 
+Here, **S** is entropy, and **V** is volume. Subscript _cell_ is used for cell variable,
+ _infinity_ is used for freestream quantity, and _total_ is used for to whole domain value.
 
-For more details about domain, boundary conditions and flow conditions of these test cases, check the Tutorial section. The solver setup (domain, grid, flow and boundary conditions) is same as listed in the separate tutorials.
+
+For more details about domain, boundary conditions and flow conditions of these test cases, 
+check the Tutorial section. The solver setup (domain, grid, flow and boundary conditions) is same as listed in the separate tutorials.
 
 Once the tests are complete, you can check the test summary in `Report.txt` file.
 ``` 
