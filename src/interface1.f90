@@ -18,7 +18,7 @@ module interface1
 
 #include "debug.h"
 #include "error.h"
-#include "mpi.inc"
+#include "mpi.h"
   private
   integer :: layers = 3
   integer :: ibuf_size

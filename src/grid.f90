@@ -6,8 +6,8 @@ module grid
     use vartypes
     use mapping, only : read_interface_map
     
-#include "error.inc"
-#include "mpi.inc"
+#include "error.h"
+#include "mpi.h"
 #include "debug.h"
     private
 
@@ -111,7 +111,6 @@ module grid
             !< input/output  status
 
             DebugCall('populate_grid_point')
-         !  print *, imx, jmx, kmx
 
             ! Read grid points from the grid file
             do k = 1, dims%kmx
@@ -126,7 +125,6 @@ module grid
                             print *, 'Exiting program.'
                             !stop
                         end if
-                        !call extract_grid_point(line, i, j, k)
                         read(line, *) nodes(i, j, k)%x, nodes(i, j, k)%y, nodes(i, j, k)%z
                     end do
                 end do

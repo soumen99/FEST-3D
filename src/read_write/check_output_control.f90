@@ -362,21 +362,9 @@ module check_output_control
 
           case('mu','viscosity','mu_l','laminar_viscosity','muv','mu_v')
             control%r_list(n) = "do not read"
-           ! if (flow%mu_ref/=0.0) then
-           !   control%r_list(n) = "Mu"
-           ! else
-           !   print*, err//trim(control%r_list(n))//" from file"
-           !   control%r_list(n) = "do not read"
-           ! end if
             
           case('mu_t','turbulent_viscosity','mut')
             control%r_list(n) = "do not read"
-            !if (scheme%turbulence/='none') then
-            !  control%r_list(n) = "Mu_t"
-            !else
-            !  print*, err//trim(control%r_list(n))//" from file"
-            !  control%r_list(n) = "do not read"
-            !end if
             
           case('tke','tk','turbulent_kinetic_enrgy','k')
             select case (trim(scheme%turbulence))
@@ -452,12 +440,6 @@ module check_output_control
 
           case('wall_distance', 'dist', 'wall_dist', 'wdist')
             control%r_list(n) = "do not read"
-            !if(scheme%turbulence/="none") then
-            !  control%r_list(n) = "Wall_distance"
-            !else
-            !  print*, err//trim(control%r_list(n))//" from file"
-            !  control%r_list(n) = "do not read"
-            !end if
 
           case('intermittency')
             select case (trim(scheme%turbulence))

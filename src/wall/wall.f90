@@ -7,7 +7,7 @@ module wall
 
 #include "../debug.h"
 #include "../error.h"
-#include "../mpi.inc"
+#include "../mpi.h"
 
   private
   integer :: ierr

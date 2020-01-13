@@ -2,7 +2,7 @@
 module viscous
   !< The viscous module contains the viscous fluxes calculations
   !-----------------------------------------------------------------
-#include "error.inc"
+#include "error.h"
   use vartypes
   use gradients  , only : gradu_x
   use gradients  , only : gradu_y
@@ -407,9 +407,6 @@ module viscous
           deltk = qp(i, j, k, 6) - qp(i-ii, j-jj, k-kk, 6) !TKE
           deltw = qp(i, j, k, 7) - qp(i-ii, j-jj, k-kk, 7) !Omega
 
-          !normal_comp   = ( delta(phi) - (grad(phi).dot.delR) )/magnitudeR
-          !new grad(phi) =  grad(phi) + correction(normal_comp.dot.delR/magnitudeR)
-
           normal_comp = (deltk - (dtkdx*delx + dtkdy*dely + dtkdz*delz))/d_LR
           dtkdx       =  dtkdx + (normal_comp * delx / d_LR)
           dtkdy       =  dtkdy + (normal_comp * dely / d_LR)
@@ -529,9 +526,6 @@ module viscous
           deltk  = qp(i, j, k, 6) - qp(i-ii, j-jj, k-kk, 6)   !TKE
           deltkl = qp(i, j, k, 7) - qp(i-ii, j-jj, k-kk, 7)   !Kl
 
-          !normal_comp   = ( delta(phi) - (grad(phi).dot.delR) )/magnitudeR
-          !new grad(phi) =  grad(phi) + correction(normal_comp.dot.delR/magnitudeR)
-
           normal_comp = (deltk - (dtkdx*delx + dtkdy*dely + dtkdz*delz))/d_LR
           dtkdx       =  dtkdx + (normal_comp * delx / d_LR)
           dtkdy       =  dtkdy + (normal_comp * dely / d_LR)
@@ -637,8 +631,6 @@ module viscous
           ! difference in state across face
           deltv = qp(i, j, k, 6) - qp(i-ii, j-jj, k-kk, 6)
 
-          !normal_comp   = ( delta(phi) - (grad(phi).dot.delR) )/magnitudeR
-          !new grad(phi) =  grad(phi) + correction(normal_comp.dot.delR/magnitudeR)
           normal_comp = (deltv - (dtvdx*delx + dtvdy*dely + dtvdz*delz))/d_LR
           dtvdx       =  dtvdx + (normal_comp * delx / d_LR)
           dtvdy       =  dtvdy + (normal_comp * dely / d_LR)
@@ -727,8 +719,6 @@ module viscous
           ! difference in state across face
           deltgm = qp(i, j, k, 8) - qp(i-ii, j-jj, k-kk, 8)
 
-          !normal_comp   = ( delta(phi) - (grad(phi).dot.delR) )/magnitudeR
-          !new grad(phi) =  grad(phi) + correction(normal_comp.dot.delR/magnitudeR)
           normal_comp = (deltgm - (dtgmdx*delx + dtgmdy*dely + dtgmdz*delz))/d_LR
           dtgmdx       =  dtgmdx + (normal_comp * delx / d_LR)
           dtgmdy       =  dtgmdy + (normal_comp * dely / d_LR)

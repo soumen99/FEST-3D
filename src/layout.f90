@@ -7,7 +7,7 @@ module layout
   use vartypes
 #include "error.h"
 #include "debug.h"
-#include "mpi.inc"
+#include "mpi.h"
   
   public :: read_layout_file
   public :: get_process_data
@@ -98,7 +98,6 @@ contains
     call get_next_token_parallel(files%CONFIG_FILE_UNIT, buf)
     read(buf,*)total_entries
     i = 0
-    !print *, process_id
     call get_next_token_parallel(files%CONFIG_FILE_UNIT, buf)
     do while(i < control%process_id)
           call get_next_token_parallel(files%CONFIG_FILE_UNIT, buf)

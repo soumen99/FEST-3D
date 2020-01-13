@@ -365,7 +365,6 @@ module read
         call get_rw_count(files, control)
         inquire(files%OUTIN_FILE_UNIT, opened=ok)
         if(ok)  close(files%OUTIN_FILE_UNIT)
-        !call close_file(files%OUTIN_FILE_UNIT)
         open(files%OUTIN_FILE_UNIT, file=files%outin_file, status='old', action='read')
 
         ! variables to write
@@ -408,7 +407,6 @@ module read
         control%w_count=0
         inquire(files%OUTIN_FILE_UNIT, opened=ok)
         if(ok)  close(files%OUTIN_FILE_UNIT)
-        !call close_file(files%OUTIN_FILE_UNIT)
         open(files%OUTIN_FILE_UNIT, file=files%outin_file, status='old', action='read')
 
         ! write list dimension
@@ -505,7 +503,6 @@ module read
 
         open(files%RES_CONTROL_FILE_UNIT, file=files%res_control_file, status='old', action='read')
         call get_count_within_braces(files%RES_CONTROL_FILE_UNIT, control%Res_count)
-        !call close_file(files%RES_CONTROL_FILE_UNIT)
         inquire(files%RES_CONTROL_FILE_UNIT, opened=ok)
         if(ok)  close(files%RES_CONTROL_FILE_UNIT)
 

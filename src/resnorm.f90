@@ -18,8 +18,8 @@ module resnorm
   use vartypes
   use utils,      only: alloc
 
-#include "error.inc"
-#include "mpi.inc"
+#include "error.h"
+#include "mpi.h"
   private
 
   real(wp) :: merror

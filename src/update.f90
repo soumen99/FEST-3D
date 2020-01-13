@@ -59,7 +59,7 @@ module update
   use lusgs     , only : setup_lusgs
 #include "debug.h"
 #include "error.h"
-#include "mpi.inc"
+#include "mpi.h"
     private
 
     real(wp), dimension(:,:,:,:), allocatable :: U_store
@@ -166,8 +166,6 @@ module update
         !< Store face quantites for K faces 
         real(wp) :: CFL 
         CFL = control%CFL
-        !finding the updated Temperature using ideal gas law
-        !T=P/(R_gas*Rho)
         Temp = qp(:,:,:,5)/(flow%R_gas*qp(:,:,:,1) )
         select case (trim(scheme%time_step_accuracy))
             case ("none")
@@ -457,20 +455,9 @@ module update
                      case('sst', 'sst2003', 'kkl')
                        if(u2(6)>=0.) then
                          qp(i,j,k,6) = u2(6)
-                       else
-                       !  qp(i,j,k,6) = tk_inf
-                       !  qp(i,j,k,6) = (max(qp(i-1,j,k,6),0.) + max(qp(i+1,j,k,6),0.) &
-                       !                +max(qp(i,j-1,k,6),0.) + max(qp(i,j+1,k,6),0.) &
-                       !                )/4
-                       !  qp(i,j,k,6) = 1.e-3*maxval(qp(i-1:i+1,j-1:j+1,k-1:k+1,6))
                        end if
                        if(u2(7)>=0.) then
                         qp(i,j,k,7) = u2(7)
-                       else
-                       !  qp(i,j,k,7) = tkl_inf
-                       !  qp(i,j,k,7) = (max(qp(i-1,j,k,7),0.) + max(qp(i+1,j,k,7),0.) &
-                       !                +max(qp(i,j-1,k,7),0.) + max(qp(i,j+1,k,7),0.) &
-                       !                )/4
                        end if
                      case('sa', 'saBC')
                        qp(i,j,k,6) = max(u2(6), 1.e-12)
