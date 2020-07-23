@@ -230,7 +230,7 @@ module gradients
         case('none')
             continue
 
-        case('basic')
+        case('grad_diffusion')
 
             gradphi_x(0:imx, 0:jmx, 0:kmx) => gradqp_x(:, :, :, n_grad)
             gradphi_y(0:imx, 0:jmx, 0:kmx) => gradqp_y(:, :, :, n_grad)
@@ -294,7 +294,7 @@ module gradients
       !Scalar transport
       select case(trim(scheme%scalar_transport))
 
-        case('basic')
+        case('grad_diffusion')
           n_grad = n_grad + 1
 
         case('none')
@@ -434,7 +434,7 @@ module gradients
       end Select
 
       select case(trim(scheme%scalar_transport))
-      case('basic')
+      case('grad_diffusion')
         phi(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:,:,:,9)
         call compute_gradient_G(gradphi_x, phi, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
         call compute_gradient_G(gradphi_y, phi, cells, Ifaces, Jfaces, Kfaces, dims, 'y')

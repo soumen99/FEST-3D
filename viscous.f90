@@ -34,7 +34,7 @@ module viscous
   use gradients  , only : gradphi_x
   use gradients  , only : gradphi_y
   use gradients  , only : gradphi_z
-  !input diffusivity
+  !input diffusivity as diff
   use gradient_diffusion, only : sc
   use viscosity, only : mu
   use viscosity, only : mu_t
@@ -134,7 +134,7 @@ module viscous
         end select
 
         select case(trim(scheme%scalar_transport))
-          case('basic')
+          case('grad_diffusion')
             call compute_diffusion_fluxes_scalar(F, qp, cells, Ifaces, flagsi, dims)
             call compute_diffusion_fluxes_scalar(G, qp, cells, Jfaces, flagsj, dims)
             if(kmx==2)then
