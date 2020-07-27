@@ -11,14 +11,14 @@ use utils         , only : alloc
 implicit none
   private
   real(wp), dimension(:, :, :), allocatable, target     :: diff
-  public :: setup_viscosity
-  public :: calculate_viscosity
+  public :: setup_diffusivity
+  public :: calculate_diffusivity
   public :: diff
 
   contains
 
     subroutine calculate_diffusivity(qp, scheme, flow, bc, dims)
-      !< Calculate molecular and turbulent viscosity
+      !< Calculate molecular diffusivity
       implicit none
       type(schemetype), intent(in) :: scheme
       !< finite-volume Schemes
@@ -83,7 +83,7 @@ implicit none
 
 
     subroutine setup_diffusivity(scheme,flow, dims)
-      !< Allocate and pointer for molecular and turbulent viscosity
+      !< Allocate and pointer for molecular diffusivity
       implicit none
       type(extent), intent(in) :: dims
       !< Extent of the domain:imx,jmx,kmx
