@@ -31,7 +31,7 @@ module lusgs
   use wall_dist, only : dist
   use viscosity, only : mu
   use viscosity, only : mu_t
-  !use diffusion, only : diff
+  use diffusivity, only : diff
 
   use gradients  , only: gradu_x
   use gradients  , only: gradu_y
@@ -2971,7 +2971,7 @@ module lusgs
               Flist1(5) = 0.5*(cells(i-1, j  , k  )%volume + cells(i,j,k)%volume)
               Flist1(6) = 0.5*(   mmu(i-1, j  , k  ) +    mmu(i,j,k))
               Flist1(7) = 0.5*(   tmu(i-1, j  , k  ) +    tmu(i,j,k))
-              !add diffusivity list
+              Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist2(1) =  Jfaces(i,j,k)%A
               Flist2(2) = -Jfaces(i,j,k)%nx
@@ -2980,7 +2980,7 @@ module lusgs
               Flist2(5) = 0.5*(cells(i  , j-1, k  )%volume + cells(i,j,k)%volume)
               Flist2(6) = 0.5*(   mmu(i  , j-1, k  ) +    mmu(i,j,k))
               Flist2(7) = 0.5*(   tmu(i  , j-1, k  ) +    tmu(i,j,k))
-              !add diffusivity list
+              Flist2(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist3(1) =  Kfaces(i,j,k)%A
               Flist3(2) = -Kfaces(i,j,k)%nx
@@ -2989,7 +2989,7 @@ module lusgs
               Flist3(5) = 0.5*(cells(i  , j  , k-1)%volume + cells(i,j,k)%volume)
               Flist3(6) = 0.5*(   mmu(i  , j  , k-1) +    mmu(i,j,k))
               Flist3(7) = 0.5*(   tmu(i  , j  , k-1) +    tmu(i,j,k))
-              !add diffusivity list
+              Flist3(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist4(1) =  Ifaces(i+1,j,k)%A
               Flist4(2) = +Ifaces(i+1,j,k)%nx
@@ -2998,7 +2998,7 @@ module lusgs
               Flist4(5) = 0.5*(cells(i+1, j  , k  )%volume + cells(i,j,k)%volume)
               Flist4(6) = 0.5*(   mmu(i+1, j  , k  ) +    mmu(i,j,k))
               Flist4(7) = 0.5*(   tmu(i+1, j  , k  ) +    tmu(i,j,k))
-              !add diffusivity list
+              Flist4(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist5(1) =  Jfaces(i,j+1,k)%A
               Flist5(2) = +Jfaces(i,j+1,k)%nx
@@ -3007,7 +3007,7 @@ module lusgs
               Flist5(5) = 0.5*(cells(i  , j+1, k  )%volume + cells(i,j,k)%volume)
               Flist5(6) = 0.5*(   mmu(i  , j+1, k  ) +    mmu(i,j,k))
               Flist5(7) = 0.5*(   tmu(i  , j+1, k  ) +    tmu(i,j,k))
-              !add diffusivity list
+              Flist5(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist6(1) =  Kfaces(i,j,k+1)%A
               Flist6(2) = +Kfaces(i,j,k+1)%nx
@@ -3016,7 +3016,7 @@ module lusgs
               Flist6(5) = 0.5*(cells(i  , j  , k+1)%volume + cells(i,j,k)%volume)
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
-              ! add diffusivity list
+              Flist6(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               NewIminusFlux     = ScalarFlux(Q1, Q0, DQ1, Flist1)
               NewJminusFlux     = ScalarFlux(Q2, Q0, DQ2, Flist2)
@@ -3087,6 +3087,7 @@ module lusgs
               Flist1(5) = 0.5*(cells(i-1, j  , k  )%volume + cells(i,j,k)%volume)
               Flist1(6) = 0.5*(   mmu(i-1, j  , k  ) +    mmu(i,j,k))
               Flist1(7) = 0.5*(   tmu(i-1, j  , k  ) +    tmu(i,j,k))
+              Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist2(1) =  Jfaces(i,j,k)%A
               Flist2(2) = -Jfaces(i,j,k)%nx
@@ -3095,6 +3096,7 @@ module lusgs
               Flist2(5) = 0.5*(cells(i  , j-1, k  )%volume + cells(i,j,k)%volume)
               Flist2(6) = 0.5*(   mmu(i  , j-1, k  ) +    mmu(i,j,k))
               Flist2(7) = 0.5*(   tmu(i  , j-1, k  ) +    tmu(i,j,k))
+              Flist2(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist3(1) =  Kfaces(i,j,k)%A
               Flist3(2) = -Kfaces(i,j,k)%nx
@@ -3103,6 +3105,7 @@ module lusgs
               Flist3(5) = 0.5*(cells(i  , j  , k-1)%volume + cells(i,j,k)%volume)
               Flist3(6) = 0.5*(   mmu(i  , j  , k-1) +    mmu(i,j,k))
               Flist3(7) = 0.5*(   tmu(i  , j  , k-1) +    tmu(i,j,k))
+              Flist3(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist4(1) =  Ifaces(i+1,j,k)%A
               Flist4(2) = +Ifaces(i+1,j,k)%nx
@@ -3111,6 +3114,7 @@ module lusgs
               Flist4(5) = 0.5*(cells(i+1, j  , k  )%volume + cells(i,j,k)%volume)
               Flist4(6) = 0.5*(   mmu(i+1, j  , k  ) +    mmu(i,j,k))
               Flist4(7) = 0.5*(   tmu(i+1, j  , k  ) +    tmu(i,j,k))
+              Flist4(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist5(1) =  Jfaces(i,j+1,k)%A
               Flist5(2) = +Jfaces(i,j+1,k)%nx
@@ -3119,6 +3123,7 @@ module lusgs
               Flist5(5) = 0.5*(cells(i  , j+1, k  )%volume + cells(i,j,k)%volume)
               Flist5(6) = 0.5*(   mmu(i  , j+1, k  ) +    mmu(i,j,k))
               Flist5(7) = 0.5*(   tmu(i  , j+1, k  ) +    tmu(i,j,k))
+              Flist5(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               Flist6(1) =  Kfaces(i,j,k+1)%A
               Flist6(2) = +Kfaces(i,j,k+1)%nx
@@ -3127,6 +3132,7 @@ module lusgs
               Flist6(5) = 0.5*(cells(i  , j  , k+1)%volume + cells(i,j,k)%volume)
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
+              Flist6(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
 
               NewIminusFlux     = ScalarFlux(Q4, Q0, DQ4, Flist4)
               NewJminusFlux     = ScalarFlux(Q5, Q0, DQ5, Flist5)
@@ -3200,7 +3206,7 @@ module lusgs
 
 
     function ScalarFlux(ql, qr, du, inputs)
-      !< calculate the total flux through face for turbulent flow (SA)
+
       !---------------------------------------
       implicit none
       real(wp), dimension(1:n_var), intent(in) :: ql !left state

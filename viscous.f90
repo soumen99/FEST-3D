@@ -34,10 +34,10 @@ module viscous
   use gradients  , only : gradphi_x
   use gradients  , only : gradphi_y
   use gradients  , only : gradphi_z
-  !input diffusivity as diff
+  use diffusivity, only : diff
   use gradient_diffusion, only : sc
-  use viscosity, only : mu
-  use viscosity, only : mu_t
+  use viscosity,   only : mu
+  use viscosity,   only : mu_t
   use global_sst , only : sst_F1
   use global_sst , only : sigma_k1
   use global_sst , only : sigma_k2
@@ -794,6 +794,7 @@ module viscous
       real(wp) :: dely
       real(wp) :: delz
       real(wp) :: mut_f
+      real(wp) :: diff_f
       real(wp) :: delphi
       real(wp) :: nx
       real(wp) :: ny
@@ -840,6 +841,7 @@ module viscous
           dphidz       =  dphidz + (normal_comp * delz / d_LR)
           !--- end of ODD-EVEN coupling correction ---!
 
+          diff_f = 0.5*(diff(i-ii, j-jj, k-kk)+ diff(i, j, k))
           if(trim(scheme%turbulence)/='none') then
             mut_f = 0.5*(mu_t(i-ii, j-jj, k-kk) + mu_t(i, j, k))
           else
@@ -856,7 +858,7 @@ module viscous
           area  = faces(i,j,k)%A
 
           ! adding viscous fluxes to stored convective flux
-          F(i, j, k, dims%n_var) = F(i, j, k, dims%n_var) - area*((diff+mut_f/sc)*(dphidx*nx + dphidy*ny + dphidz*nz))
+          F(i, j, k, dims%n_var) = F(i, j, k, dims%n_var) - area*((diff_f+mut_f/sc)*(dphidx*nx + dphidy*ny + dphidz*nz))
 
         end do
        end do
