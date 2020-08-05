@@ -2392,7 +2392,9 @@ module plusgs
       RhoHt          = ( (gm/(gm-1.0)) * W(5) ) + HalfRhoUsquare
       Flux(5)        = RhoHt * FaceNormalVelocity
       Flux(6) = ( W(6) * Flux(1) )
-
+      if (n_var==7) then
+        Flux(7) = ( W(7) * Flux(1))
+      end if
 
       ! viscous terms
       muCap = 0.25*(P(1)+W(1))*(P(6) + W(6))
@@ -2776,18 +2778,18 @@ module plusgs
               C5  = (/Cells(i  ,j+1,k  )%Centerx,Cells(i  ,j+1,k  )%Centery,Cells(i  ,j+1,k  )%Centerz/)
               C6  = (/Cells(i  ,j  ,k+1)%Centerx,Cells(i  ,j  ,k+1)%Centery,Cells(i  ,j  ,k+1)%Centerz/)
 
-              Q0  = qp(i  , j  , k  , 1:8)
-              Q1  = qp(i-1, j  , k  , 1:8)
-              Q2  = qp(i  , j-1, k  , 1:8)
-              Q3  = qp(i  , j  , k-1, 1:8)
-              Q4  = qp(i+1, j  , k  , 1:8)
-              Q5  = qp(i  , j+1, k  , 1:8)
-              Q6  = qp(i  , j  , k+1, 1:8)
+              Q0  = qp(i  , j  , k  , 1:n1)
+              Q1  = qp(i-1, j  , k  , 1:n1)
+              Q2  = qp(i  , j-1, k  , 1:n1)
+              Q3  = qp(i  , j  , k-1, 1:n1)
+              Q4  = qp(i+1, j  , k  , 1:n1)
+              Q5  = qp(i  , j+1, k  , 1:n1)
+              Q6  = qp(i  , j  , k+1, 1:n1)
 
               DQ0 = 0.0
-              DQ4 = delQ(i+1, j  , k  , 1:8)
-              DQ5 = delQ(i  , j+1, k  , 1:8)
-              DQ6 = delQ(i  , j  , k+1, 1:8)
+              DQ4 = delQ(i+1, j  , k  , 1:n1)
+              DQ5 = delQ(i  , j+1, k  , 1:n1)
+              DQ6 = delQ(i  , j  , k+1, 1:n1)
 
               Flist1(1) =  Ifaces(i,j,k)%A
               Flist1(2) = -Ifaces(i,j,k)%nx
@@ -3192,7 +3194,7 @@ module plusgs
       dphidx  = ( P(9) - W(9) ) * nx * Area / Volume
       dphidy  = ( P(9) - W(9) ) * ny * Area / Volume
       dphidz  = ( P(9) - W(9) ) * nz * Area / Volume
-      Flux(7) = Flux(7) -  (gdiff + tmu/sc)*(dphidx*nx + dphidy*ny + dphidz*nz)
+      Flux(9) = Flux(9) -  (gdiff + tmu/sc)*(dphidx*nx + dphidy*ny + dphidz*nz)
       end if
 
       Flux    = Flux * Area

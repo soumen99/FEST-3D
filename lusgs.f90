@@ -2521,6 +2521,8 @@ module lusgs
     subroutine update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
       !< Update the RANS (LCTM2015 transition model with SST2003) equation with LU-SGS
       implicit none
+      type(schemetype), intent(in) :: scheme
+      !for scalar check
       type(extent), intent(in) :: dims
       !< Extent of the domain:imx,jmx,kmx
       real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout) :: qp
@@ -2538,40 +2540,47 @@ module lusgs
       type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
       !< Input varaible which stores K faces' area and unit normal
       integer :: i,j,k
-        real(wp), dimension(1:8)     :: deltaU
-        real(wp), dimension(1:8)     :: D
-        real(wp), dimension(1:8)     :: conservativeQ
-        real(wp), dimension(1:8)     :: OldIminusFlux
-        real(wp), dimension(1:8)     :: OldJminusFlux
-        real(wp), dimension(1:8)     :: OldKminusFlux
-        real(wp), dimension(1:8)     :: NewIminusFlux
-        real(wp), dimension(1:8)     :: NewJminusFlux
-        real(wp), dimension(1:8)     :: NewKminusFlux
-        real(wp), dimension(1:8)     :: DelIminusFlux
-        real(wp), dimension(1:8)     :: DelJminusFlux
-        real(wp), dimension(1:8)     :: DelKminusFlux
+      integer :: n1 = 8, n2 = 8
+      select case(trim(scheme%scalar_transport))
+      case('grad_diffusion')
+        n1 = n1 + 1
+        n2 = n2 + 1
+        case('none')
+            continue
+        real(wp), dimension(1:n1)     :: deltaU
+        real(wp), dimension(1:n1)     :: D
+        real(wp), dimension(1:n1)     :: conservativeQ
+        real(wp), dimension(1:n1)     :: OldIminusFlux
+        real(wp), dimension(1:n1)     :: OldJminusFlux
+        real(wp), dimension(1:n1)     :: OldKminusFlux
+        real(wp), dimension(1:n1)     :: NewIminusFlux
+        real(wp), dimension(1:n1)     :: NewJminusFlux
+        real(wp), dimension(1:n1)     :: NewKminusFlux
+        real(wp), dimension(1:n1)     :: DelIminusFlux
+        real(wp), dimension(1:n1)     :: DelJminusFlux
+        real(wp), dimension(1:n1)     :: DelKminusFlux
         real(wp), dimension(1:6)     :: LambdaTimesArea
-        real(wp), dimension(1:8)     :: Q0 ! state at cell
-        real(wp), dimension(1:8)     :: Q1 ! state at neighbours
-        real(wp), dimension(1:8)     :: Q2
-        real(wp), dimension(1:8)     :: Q3
-        real(wp), dimension(1:8)     :: Q4
-        real(wp), dimension(1:8)     :: Q5
-        real(wp), dimension(1:8)     :: Q6
-        real(wp), dimension(1:8)     :: DQ0! change in state
-        real(wp), dimension(1:8)     :: DQ1
-        real(wp), dimension(1:8)     :: DQ2
-        real(wp), dimension(1:8)     :: DQ3
-        real(wp), dimension(1:8)     :: DQ4
-        real(wp), dimension(1:8)     :: DQ5
-        real(wp), dimension(1:8)     :: DQ6
+        real(wp), dimension(1:n1)     :: Q0 ! state at cell
+        real(wp), dimension(1:n1)     :: Q1 ! state at neighbours
+        real(wp), dimension(1:n1)     :: Q2
+        real(wp), dimension(1:n1)     :: Q3
+        real(wp), dimension(1:n1)     :: Q4
+        real(wp), dimension(1:n1)     :: Q5
+        real(wp), dimension(1:n1)     :: Q6
+        real(wp), dimension(1:n1)     :: DQ0! change in state
+        real(wp), dimension(1:n1)     :: DQ1
+        real(wp), dimension(1:n1)     :: DQ2
+        real(wp), dimension(1:n1)     :: DQ3
+        real(wp), dimension(1:n1)     :: DQ4
+        real(wp), dimension(1:n1)     :: DQ5
+        real(wp), dimension(1:n1)     :: DQ6
 
-        real(wp), dimension(1:8)     :: Flist1
-        real(wp), dimension(1:8)     :: Flist2
-        real(wp), dimension(1:8)     :: Flist3
-        real(wp), dimension(1:8)     :: Flist4
-        real(wp), dimension(1:8)     :: Flist5
-        real(wp), dimension(1:8)     :: Flist6
+        real(wp), dimension(1:n2)     :: Flist1
+        real(wp), dimension(1:n2)     :: Flist2
+        real(wp), dimension(1:n2)     :: Flist3
+        real(wp), dimension(1:n2)     :: Flist4
+        real(wp), dimension(1:n2)     :: Flist5
+        real(wp), dimension(1:n2)     :: Flist6
         real(wp), dimension(1:3)     :: C0
         real(wp), dimension(1:3)     :: C1
         real(wp), dimension(1:3)     :: C2
@@ -2615,18 +2624,18 @@ module lusgs
               C5  = (/Cells(i  ,j+1,k  )%Centerx,Cells(i  ,j+1,k  )%Centery,Cells(i  ,j+1,k  )%Centerz/)
               C6  = (/Cells(i  ,j  ,k+1)%Centerx,Cells(i  ,j  ,k+1)%Centery,Cells(i  ,j  ,k+1)%Centerz/)
 
-              Q0  = qp(i  , j  , k  , 1:8)
-              Q1  = qp(i-1, j  , k  , 1:8)
-              Q2  = qp(i  , j-1, k  , 1:8)
-              Q3  = qp(i  , j  , k-1, 1:8)
-              Q4  = qp(i+1, j  , k  , 1:8)
-              Q5  = qp(i  , j+1, k  , 1:8)
-              Q6  = qp(i  , j  , k+1, 1:8)
+              Q0  = qp(i  , j  , k  , 1:n1)
+              Q1  = qp(i-1, j  , k  , 1:n1)
+              Q2  = qp(i  , j-1, k  , 1:n1)
+              Q3  = qp(i  , j  , k-1, 1:n1)
+              Q4  = qp(i+1, j  , k  , 1:n1)
+              Q5  = qp(i  , j+1, k  , 1:n1)
+              Q6  = qp(i  , j  , k+1, 1:n1)
 
               DQ0 = 0.0
-              DQ1 = delQstar(i-1, j  , k  , 1:8)
-              DQ2 = delQstar(i  , j-1, k  , 1:8)
-              DQ3 = delQstar(i  , j  , k-1, 1:8)
+              DQ1 = delQstar(i-1, j  , k  , 1:n1)
+              DQ2 = delQstar(i  , j-1, k  , 1:n1)
+              DQ3 = delQstar(i  , j  , k-1, 1:n1)
 
               Flist1(1) =  Ifaces(i,j,k)%A
               Flist1(2) = -Ifaces(i,j,k)%nx
@@ -2681,6 +2690,15 @@ module lusgs
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
+
+              if (n1 == 9) then
+                Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(9) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(9) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(9) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              end if
 
               NewIminusFlux     = lctm2015Flux(Q1, Q0, DQ1, Flist1)
               NewJminusFlux     = lctm2015Flux(Q2, Q0, DQ2, Flist2)
@@ -2737,12 +2755,12 @@ module lusgs
               D(8) = (D(8) + (-Dp + DE )*cells(i,j,k)%volume)
               !storing D in Iflux array for backward sweep
 
-              deltaU(1:8) = -residue(i,j,k,1:8) &
-                - 0.5*((DelIminusFlux - LambdaTimesArea(1)*delQstar(i-1,j,k,1:8)) &
-                     + (DelJminusFlux - LambdaTimesArea(2)*delQstar(i,j-1,k,1:8)) &
-                     + (DelKminusFlux - LambdaTimesArea(3)*delQstar(i,j,k-1,1:8)) )
+              deltaU(1:n1) = -residue(i,j,k,1:n1) &
+                - 0.5*((DelIminusFlux - LambdaTimesArea(1)*delQstar(i-1,j,k,1:n1)) &
+                     + (DelJminusFlux - LambdaTimesArea(2)*delQstar(i,j-1,k,1:n1)) &
+                     + (DelKminusFlux - LambdaTimesArea(3)*delQstar(i,j,k-1,1:n1)) )
 
-              delQstar(i,j,k,1:8) = deltaU(1:8)/D
+              delQstar(i,j,k,1:n1) = deltaU(1:n1)/D
             end do
           end do
         end do
@@ -2761,18 +2779,19 @@ module lusgs
               C5  = (/Cells(i  ,j+1,k  )%Centerx,Cells(i  ,j+1,k  )%Centery,Cells(i  ,j+1,k  )%Centerz/)
               C6  = (/Cells(i  ,j  ,k+1)%Centerx,Cells(i  ,j  ,k+1)%Centery,Cells(i  ,j  ,k+1)%Centerz/)
 
-              Q0  = qp(i  , j  , k  , 1:8)
-              Q1  = qp(i-1, j  , k  , 1:8)
-              Q2  = qp(i  , j-1, k  , 1:8)
-              Q3  = qp(i  , j  , k-1, 1:8)
-              Q4  = qp(i+1, j  , k  , 1:8)
-              Q5  = qp(i  , j+1, k  , 1:8)
-              Q6  = qp(i  , j  , k+1, 1:8)
+
+              Q0  = qp(i  , j  , k  , 1:n1)
+              Q1  = qp(i-1, j  , k  , 1:n1)
+              Q2  = qp(i  , j-1, k  , 1:n1)
+              Q3  = qp(i  , j  , k-1, 1:n1)
+              Q4  = qp(i+1, j  , k  , 1:n1)
+              Q5  = qp(i  , j+1, k  , 1:n1)
+              Q6  = qp(i  , j  , k+1, 1:n1)
 
               DQ0 = 0.0
-              DQ4 = delQ(i+1, j  , k  , 1:8)
-              DQ5 = delQ(i  , j+1, k  , 1:8)
-              DQ6 = delQ(i  , j  , k+1, 1:8)
+              DQ4 = delQ(i+1, j  , k  , 1:n1)
+              DQ5 = delQ(i  , j+1, k  , 1:n1)
+              DQ6 = delQ(i  , j  , k+1, 1:n1)
 
               Flist1(1) =  Ifaces(i,j,k)%A
               Flist1(2) = -Ifaces(i,j,k)%nx
@@ -2828,6 +2847,16 @@ module lusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
+
+              if (n1 == 9) then
+                Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(9) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(9) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(9) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              end if
+
               NewIminusFlux     = lctm2015Flux(Q4, Q0, DQ4, Flist4)
               NewJminusFlux     = lctm2015Flux(Q5, Q0, DQ5, Flist5)
               NewKminusFlux     = lctm2015Flux(Q6, Q0, DQ6, Flist6)
@@ -2881,10 +2910,10 @@ module lusgs
               De = 0.06*vort*Fturb*density*(2.0*50.0*Q0(8) - 1.0)
               D(8) = (D(8) + (-Dp + DE )*cells(i,j,k)%volume)
 
-              delQ(i,j,k,1:8) = delQstar(i,j,k,1:8) &
-                - 0.5*((DelIminusFlux - LambdaTimesArea(4)*delQ(i+1,j,k,1:8)) &
-                     + (DelJminusFlux - LambdaTimesArea(5)*delQ(i,j+1,k,1:8)) &
-                     + (DelKminusFlux - LambdaTimesArea(6)*delQ(i,j,k+1,1:8)) )/D
+              delQ(i,j,k,1:n1) = delQstar(i,j,k,1:n1) &
+                - 0.5*((DelIminusFlux - LambdaTimesArea(4)*delQ(i+1,j,k,1:n1)) &
+                     + (DelJminusFlux - LambdaTimesArea(5)*delQ(i,j+1,k,1:n1)) &
+                     + (DelKminusFlux - LambdaTimesArea(6)*delQ(i,j,k+1,1:n1)) )/D
 
             end do
           end do
@@ -2901,6 +2930,9 @@ module lusgs
               conservativeQ(6) = qp(i,j,k,1) * qp(i,j,k,6)
               conservativeQ(7) = qp(i,j,k,1) * qp(i,j,k,7)
               conservativeQ(8) = qp(i,j,k,1) * qp(i,j,k,8)
+              if (n_var == 9) then
+                conservativeQ(9) = qp(i,j,k,1) * qp(i,j,k,9)
+              end if
 
               ! add new change into conservative solution
               conservativeQ(1:n_var) = conservativeQ(1:n_var) + delQ(i,j,k,1:n_var)
@@ -2921,6 +2953,9 @@ module lusgs
               end if
               qp(i,j,k,8) = conservativeQ(8) / conservativeQ(1)
               qp(i,j,k,8) = max(qp(i,j,k,8), 0.0)
+              if (n_var ==9) then
+                qp(i,j,k,9) = conservativeQ(9) / conservativeQ(1)
+              end if
               !qp(i,j,k,8) = min(qp(i,j,k,8), 1.0)
             end do
           end do
@@ -2935,7 +2970,7 @@ module lusgs
       real(wp), dimension(1:n_var), intent(in) :: qr !right state
       !conservative form of updated neighbour
       real(wp), dimension(1:n_var), intent(in) :: du
-      real(wp), dimension(1:8)    , intent(in) :: inputs
+      real(wp), dimension(1:9)    , intent(in) :: inputs
       real(wp), dimension(1:n_var)             :: Flux
       real(wp), dimension(1:n_var)             :: lctm2015flux
       real(wp), dimension(1:n_var)             :: U ! conservative variables
@@ -2973,6 +3008,11 @@ module lusgs
       real(wp)    :: dtgmdx
       real(wp)    :: dtgmdy
       real(wp)    :: dtgmdz
+      if (n_var == 9) then
+      real(wp)    :: dphidx
+      real(wp)    :: dphidy
+      real(wp)    :: dphidz
+      real(wp)    :: gdiff
       real(wp)    :: T1, T2
       real(wp)    :: uface
       real(wp)    :: vface
@@ -3004,7 +3044,7 @@ module lusgs
       mmu    = inputs(6)
       tmu    = inputs(7)
       F1     = inputs(8)
-
+      gdiff  = inputs(9)
 
       !save the old stat in P
       P = qr
@@ -3018,7 +3058,9 @@ module lusgs
       U(6)   =   ql(1) * ql(6)
       U(7)   =   ql(1) * ql(7)
       U(8)   =   ql(1) * ql(8)
-
+      if (n_var == 9) then
+        U(9) =   q1(1) *q1(9)
+      end if
       U(1:n_var) = U(1:n_var) + du(1:n_var)
 
 
@@ -3034,6 +3076,9 @@ module lusgs
       W(7)   = W(7) + 0.5*(1.-sign(1.,W(7)))*(ql(7)-W(7))
       W(8) = max(W(8), 0.0)
       !W(8) = min(W(8), 1.0)
+      if (n_var==9) then
+      W(9)   = U(9) / U(1)
+      end if
 
       FaceNormalVelocity = (W(2) * nx) + (W(3) * ny) + (W(4) * nz)
       uface = 0.5 * ( W(2) + P(2) )
@@ -3052,7 +3097,9 @@ module lusgs
       Flux(6) = ( W(6) * Flux(1) )
       Flux(7) = ( W(7) * Flux(1) )
       Flux(8) = ( W(8) * Flux(1) )
-
+      if (n_var==9) then
+      Flux(8) =  ( W(9)* Flux(1) )
+      end if
 
       ! viscous terms
       mu = mmu + tmu
@@ -3105,6 +3152,14 @@ module lusgs
       Flux(6) = Flux(6) + (mmu + sigma_k*tmu)*(dtkdx*nx + dtkdy*ny + dtkdz*nz)
       Flux(7) = Flux(7) + (mmu + sigma_w*tmu)*(dtwdx*nx + dtwdy*ny + dtwdz*nz)
       Flux(8) = Flux(8) + (mmu + tmu)*(dtgmdx*nx + dtgmdy*ny + dtgmdz*nz)
+
+      if (n_var == 9) then
+
+      dphidx  = ( P(9) - W(9) ) * nx * Area / Volume
+      dphidy  = ( P(9) - W(9) ) * ny * Area / Volume
+      dphidz  = ( P(9) - W(9) ) * nz * Area / Volume
+      Flux(9) = Flux(9) -  (gdiff + tmu/sc)*(dphidx*nx + dphidy*ny + dphidz*nz)
+      end if
 
       Flux    = Flux * Area
       lctm2015flux = Flux
