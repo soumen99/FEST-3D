@@ -212,9 +212,9 @@ module gradients
 
           case('lctm2015')
             !call setup_lctm2015_grad()
-            gradtgm_x(0:imx, 0:jmx, 0:kmx) => gradqp_x(:, :, :, n_grad)
-            gradtgm_y(0:imx, 0:jmx, 0:kmx) => gradqp_y(:, :, :, n_grad)
-            gradtgm_z(0:imx, 0:jmx, 0:kmx) => gradqp_z(:, :, :, n_grad)
+            gradtgm_x(0:imx, 0:jmx, 0:kmx) => gradqp_x(:, :, :, 7)
+            gradtgm_y(0:imx, 0:jmx, 0:kmx) => gradqp_y(:, :, :, 7)
+            gradtgm_z(0:imx, 0:jmx, 0:kmx) => gradqp_z(:, :, :, 7)
 
           case('none','bc')
             !do nothing
@@ -282,10 +282,12 @@ module gradients
       select case(trim(scheme%transition))
 
         case('lctm2015')
-          n_grad = n_grad + 1
+          !n_grad = n_grad + 1
+          n_grad = 7
 
         case('none','bc')
-          n_grad = n_grad + 0
+          !n_grad = n_grad + 0
+          continue
 
         case DEFAULT
           Fatal_error
@@ -435,7 +437,7 @@ module gradients
 
       select case(trim(scheme%scalar_transport))
       case('grad_diffusion')
-        phi(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:,:,:,9)
+        phi(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:,:,:,n_var)
         call compute_gradient_G(gradphi_x, phi, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
         call compute_gradient_G(gradphi_y, phi, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
         if(kmx>2)then
@@ -488,7 +490,7 @@ module gradients
               do i=0,dims%imx
                 grad(i,j,k) =(-(var(i-1,j  ,k  )+var(i,j,k))*Ifaces(i,j,k)%nx*Ifaces(i,j,k)%A &
                               -(var(i  ,j-1,k  )+var(i,j,k))*Jfaces(i,j,k)%nx*Jfaces(i,j,k)%A &
-                              -(var(i  ,j  ,k-1)+var(i,j,k))*Kfaces(i,j,k)%nx*Jfaces(i,j,k)%A &
+                              -(var(i  ,j  ,k-1)+var(i,j,k))*Kfaces(i,j,k)%nx*Kfaces(i,j,k)%A &
                               +(var(i+1,j  ,k  )+var(i,j,k))*Ifaces(i+1,j  ,k  )%nx*Ifaces(i+1,j  ,k  )%A &
                               +(var(i  ,j+1,k  )+var(i,j,k))*Jfaces(i  ,j+1,k  )%nx*Jfaces(i  ,j+1,k  )%A &
                               +(var(i  ,j  ,k+1)+var(i,j,k))*Kfaces(i  ,j  ,k+1)%nx*Kfaces(i  ,j  ,k+1)%A &
@@ -502,7 +504,7 @@ module gradients
               do i=0,dims%imx
                 grad(i,j,k) =(-(var(i-1,j  ,k  )+var(i,j,k))*Ifaces(i,j,k)%ny*Ifaces(i,j,k)%A &
                               -(var(i  ,j-1,k  )+var(i,j,k))*Jfaces(i,j,k)%ny*Jfaces(i,j,k)%A &
-                              -(var(i  ,j  ,k-1)+var(i,j,k))*Kfaces(i,j,k)%ny*Jfaces(i,j,k)%A &
+                              -(var(i  ,j  ,k-1)+var(i,j,k))*Kfaces(i,j,k)%ny*Kfaces(i,j,k)%A &
                               +(var(i+1,j  ,k  )+var(i,j,k))*Ifaces(i+1,j  ,k  )%ny*Ifaces(i+1,j  ,k  )%A &
                               +(var(i  ,j+1,k  )+var(i,j,k))*Jfaces(i  ,j+1,k  )%ny*Jfaces(i  ,j+1,k  )%A &
                               +(var(i  ,j  ,k+1)+var(i,j,k))*Kfaces(i  ,j  ,k+1)%ny*Kfaces(i  ,j  ,k+1)%A &
@@ -516,7 +518,7 @@ module gradients
               do i=0,dims%imx
                 grad(i,j,k) =(-(var(i-1,j  ,k  )+var(i,j,k))*Ifaces(i,j,k)%nz*Ifaces(i,j,k)%A &
                               -(var(i  ,j-1,k  )+var(i,j,k))*Jfaces(i,j,k)%nz*Jfaces(i,j,k)%A &
-                              -(var(i  ,j  ,k-1)+var(i,j,k))*Kfaces(i,j,k)%nz*Jfaces(i,j,k)%A &
+                              -(var(i  ,j  ,k-1)+var(i,j,k))*Kfaces(i,j,k)%nz*Kfaces(i,j,k)%A &
                               +(var(i+1,j  ,k  )+var(i,j,k))*Ifaces(i+1,j  ,k  )%nz*Ifaces(i+1,j  ,k  )%A &
                               +(var(i  ,j+1,k  )+var(i,j,k))*Jfaces(i  ,j+1,k  )%nz*Jfaces(i  ,j+1,k  )%A &
                               +(var(i  ,j  ,k+1)+var(i,j,k))*Kfaces(i  ,j  ,k+1)%nz*Kfaces(i  ,j  ,k+1)%A &

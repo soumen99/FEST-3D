@@ -165,44 +165,44 @@ module lusgs
       DebugCall("Update_with_lusgs")
       select case(trim(scheme%turbulence))
         case('none')
-          call update_laminar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+          call update_laminar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
 
         case('sst', 'sst2003')
           select case(trim(scheme%transition))
             case('none', 'bc')
-              call update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+              call update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
             case('lctm2015')
-              call update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+              call update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
             case DEFAULT
               Fatal_error
           end select
 
         case('kkl')
-          call update_KKL_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+          call update_KKL_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
 
         case('sa', 'saBC')
-          call update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+          call update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
 
         case Default
           Fatal_error
 
       end select
 
-      select case(trim(scheme%scalar_transport))
-      case('none')
-        continue
-        case('grad_diffusion')
-            call update_scalar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+      !select case(trim(scheme%scalar_transport))
+      !case('none')
+      !  continue
+      !  case('grad_diffusion')
+      !      call update_scalar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
 
-            case DEFAULT
-                Fatal_error
-      end select
+      !      case DEFAULT
+      !          Fatal_error
+      !end select
 
 
     end subroutine update_with_lusgs
 
 
-    subroutine update_laminar_variables(qp,residue,delta_t,cells,Ifaces,Jfaces,Kfaces,dims)
+    subroutine update_laminar_variables(qp,residue,delta_t,cells,Ifaces,Jfaces,Kfaces, scheme, dims)
       !< Update laminar flow with LU-SGS scheme
       implicit none
       integer :: i,j,k
@@ -224,7 +224,8 @@ module lusgs
       !< Input varaible which stores J faces' area and unit normal
       type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
       !< Input varaible which stores K faces' area and unit normal
-      integer :: n1 = 5,n2 = 7
+      integer :: n1 = 5
+      integer :: n2 = 7
       select case(trim(scheme%scalar_transport))
       case('grad_diffusion')
         n1 = n1 + 1
@@ -234,8 +235,10 @@ module lusgs
 
       end select
 
+
+
         real(wp), dimension(1:n1)     :: deltaU
-        real(wp)                     :: D
+        real(wp)                      :: D
         real(wp), dimension(1:n1)     :: conservativeQ
         real(wp), dimension(1:n1)     :: OldIminusFlux
         real(wp), dimension(1:n1)     :: OldJminusFlux
@@ -246,7 +249,7 @@ module lusgs
         real(wp), dimension(1:n1)     :: DelIminusFlux
         real(wp), dimension(1:n1)     :: DelJminusFlux
         real(wp), dimension(1:n1)     :: DelKminusFlux
-        real(wp), dimension(1:6)     :: LambdaTimesArea
+        real(wp), dimension(1:6)      :: LambdaTimesArea
         real(wp), dimension(1:n1)     :: Q0 ! state at cell
         real(wp), dimension(1:n1)     :: Q1 ! state at neighbours
         real(wp), dimension(1:n1)     :: Q2
@@ -371,12 +374,12 @@ module lusgs
               OldJminusFlux     = Flux(Q2, Q0, DQ0, Flist2)
               OldKminusFlux     = Flux(Q3, Q0, DQ0, Flist3)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -394,7 +397,7 @@ module lusgs
                      + (DelJminusFlux - LambdaTimesArea(2)*delQstar(i,j-1,k,1:n1)) &
                      + (DelKminusFlux - LambdaTimesArea(3)*delQstar(i,j,k-1,1:n1)) )
 
-              delQstar(i,j,k,1:5) = deltaU(1:5)/D
+              delQstar(i,j,k,1:n1) = deltaU(1:n1)/D
             end do
           end do
         end do
@@ -493,12 +496,12 @@ module lusgs
               OldJminusFlux     = Flux(Q5, Q0, DQ0, Flist5)
               OldKminusFlux     = Flux(Q6, Q0, DQ0, Flist6)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -530,7 +533,7 @@ module lusgs
               end if
 
               ! add new change into conservative solution
-              conservativeQ(1:5) = conservativeQ(1:5) + delQ(i,j,k,1:5)
+              conservativeQ(1:n1) = conservativeQ(1:n1) + delQ(i,j,k,1:n1)
 
               ! convert back conservative to primitive
               qp(i,j,k,1) = conservativeQ(1)
@@ -556,12 +559,15 @@ module lusgs
       real(wp), dimension(1:n_var), intent(in) :: qr !right state
       !conservative form of updated neighbour
       real(wp), dimension(1:n_var), intent(in) :: du
-      real(wp), dimension(1:8)    , intent(in) :: inputs
       real(wp), dimension(1:n_var)             :: Flux
       real(wp), dimension(1:n_var)             :: U ! conservative variables
       real(wp), dimension(1:n_var)             :: W ! new primitive variables
       real(wp), dimension(1:n_var)             :: P ! primitive variables of right cell
-
+      integer(wp) :: n2 = 7
+      if n_var == 6 then
+      n2 = n2 + 1
+      end if
+      real(wp), dimension(1:n2)    , intent(in) :: inputs
       !for extraction of the inputs
       real(wp) :: area
       real(wp) :: nx
@@ -570,7 +576,6 @@ module lusgs
       real(wp) :: volume
       real(wp) :: mmu
       real(wp) :: tmu
-      real(wp) :: gdiff
 
       real(wp)    :: dudx
       real(wp)    :: dudy
@@ -584,12 +589,6 @@ module lusgs
       real(wp)    :: dTdx
       real(wp)    :: dTdy
       real(wp)    :: dTdz
-      if (n_var == 6) then
-      real(wp)    :: dphidx
-      real(wp)    :: dphidy
-      real(wp)    :: dphidz
-      real(wp)    :: gdiff
-      end if
       real(wp)    :: T1, T2
       real(wp)    :: uface
       real(wp)    :: vface
@@ -617,7 +616,16 @@ module lusgs
       volume = inputs(5)
       mmu    = inputs(6)
       tmu    = inputs(7)
+
+      if (n_var == 6) then
+      real(wp)    :: dphidx
+      real(wp)    :: dphidy
+      real(wp)    :: dphidz
+      real(wp)    :: gdiff
       gdiff  = inputs(8)
+      end if
+
+
 
       !save the old stat in P
       P = qr
@@ -764,11 +772,12 @@ module lusgs
     end function SpectralRadius
 
 
-    subroutine update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update the RANS (SST) equation with LU-SGS
       implicit none
 
       type(schemetype), intent(in) :: scheme
+      ! to check scalar
       type(extent), intent(in) :: dims
       !< Extent of the domain:imx,jmx,kmx
       real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout):: qp
@@ -787,7 +796,8 @@ module lusgs
       !< Input varaible which stores K faces' area and unit normal
       integer :: i,j,k
 
-      integer :: n1 = 7,n2 = 8
+      integer :: n1 = 7
+      integer :: n2 = 8
       select case(trim(scheme%scalar_transport))
       case('grad_diffusion')
         n1 = n1 + 1
@@ -928,13 +938,13 @@ module lusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
-              if (n1 == 8) then
-                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 9) then
+                Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(9) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(9) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(9) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
               NewIminusFlux     = SSTFlux(Q1, Q0, DQ1, Flist1)
@@ -945,12 +955,12 @@ module lusgs
               OldKminusFlux     = SSTFlux(Q3, Q0, DQ0, Flist3)
 
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -1058,13 +1068,13 @@ module lusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
-              if (n1 == 8) then
-                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 9) then
+                Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(9) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(9) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(9) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
               NewIminusFlux     = SSTFlux(Q4, Q0, DQ4, Flist4)
@@ -1075,12 +1085,12 @@ module lusgs
               OldKminusFlux     = SSTFlux(Q6, Q0, DQ0, Flist6)
 
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -1150,12 +1160,19 @@ module lusgs
       real(wp), dimension(1:n_var), intent(in) :: qr !right state
       !conservative form of updated neighbour
       real(wp), dimension(1:n_var), intent(in) :: du
-      real(wp), dimension(1:9)    , intent(in) :: inputs
+      !real(wp), dimension(1:9)    , intent(in) :: inputs
       real(wp), dimension(1:n_var)             :: Flux
       real(wp), dimension(1:n_var)             :: SSTFlux
       real(wp), dimension(1:n_var)             :: U ! conservative variables
       real(wp), dimension(1:n_var)             :: W ! new primitive variables
       real(wp), dimension(1:n_var)             :: P ! primitive variables of right cell
+
+      integer(wp) :: n2 = 8
+      if n_var == 8 then
+      n2 = n2 + 1
+      end if
+      real(wp), dimension(1:n2)    , intent(in) :: inputs
+      !for extraction of the inputs
 
       !for extraction of the inputs
       real(wp) :: area
@@ -1165,8 +1182,6 @@ module lusgs
       real(wp) :: volume
       real(wp) :: mmu
       real(wp) :: tmu
-
-
       real(wp)    :: dudx
       real(wp)    :: dudy
       real(wp)    :: dudz
@@ -1185,11 +1200,6 @@ module lusgs
       real(wp)    :: dtwdx
       real(wp)    :: dtwdy
       real(wp)    :: dtwdz
-      if (n_var == 8) then
-      real(wp)    :: dphidx
-      real(wp)    :: dphidy
-      real(wp)    :: dphidz
-      real(wp)    :: gdiff
       real(wp)    :: T1, T2
       real(wp)    :: uface
       real(wp)    :: vface
@@ -1221,7 +1231,13 @@ module lusgs
       mmu    = inputs(6)
       tmu    = inputs(7)
       F1     = inputs(8)
+      if (n_var == 8) then
+      real(wp)    :: dphidx
+      real(wp)    :: dphidy
+      real(wp)    :: dphidz
+      real(wp)    :: gdiff
       gdiff  = inputs(9)
+      end if
 
       !save the old stat in P
       P = qr
@@ -1335,10 +1351,11 @@ module lusgs
 
     end function SSTFlux
 
-    subroutine update_KKL_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_KKL_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update the RANS (k-kL) equation with LU-SGS
       implicit none
       type(schemetype), intent(in) :: scheme
+      ! check scalar
       type(extent), intent(in) :: dims
       !< Extent of the domain:imx,jmx,kmx
       real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout):: qp
@@ -1356,7 +1373,7 @@ module lusgs
       type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
       !< Input varaible which stores K faces' area and unit normal
       integer :: i,j,k
-      integer :: n1 = 7,n2 = 8
+      integer :: n1 = 7,n2 = 7
       select case(trim(scheme%scalar_transport))
       case('grad_diffusion')
         n1 = n1 + 1
@@ -1484,7 +1501,7 @@ module lusgs
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
 
-              if (n1 == 8) then
+              if (n2 == 8) then
                 Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
                 Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
                 Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
@@ -1501,12 +1518,12 @@ module lusgs
               OldJminusFlux     = KKLFlux(Q2, Q0, DQ0, Flist2)
               OldKminusFlux     = KKLFlux(Q3, Q0, DQ0, Flist3)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -1606,7 +1623,7 @@ module lusgs
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
 
-              if (n1 == 8) then
+              if (n2 == 8) then
                 Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
                 Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
                 Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
@@ -1622,12 +1639,12 @@ module lusgs
               OldJminusFlux     = KKLFlux(Q5, Q0, DQ0, Flist5)
               OldKminusFlux     = KKLFlux(Q6, Q0, DQ0, Flist6)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -1701,6 +1718,14 @@ module lusgs
       real(wp), dimension(1:n_var)             :: W ! new primitive variables
       real(wp), dimension(1:n_var)             :: P ! primitive variables of right cell
 
+      integer(wp) :: n2 = 7
+      if n_var == 8 then
+      n2 = n2 + 1
+      end if
+      real(wp), dimension(1:n2)    , intent(in) :: inputs
+
+
+
       !for extraction of the inputs
       real(wp) :: area
       real(wp) :: nx
@@ -1729,12 +1754,6 @@ module lusgs
       real(wp)    :: dtkldx
       real(wp)    :: dtkldy
       real(wp)    :: dtkldz
-      if (n_var == 8) then
-      real(wp)    :: dphidx
-      real(wp)    :: dphidy
-      real(wp)    :: dphidz
-      real(wp)    :: gdiff
-      end if
       real(wp)    :: T1, T2
       real(wp)    :: uface
       real(wp)    :: vface
@@ -1762,7 +1781,15 @@ module lusgs
       volume = inputs(5)
       mmu    = inputs(6)
       tmu    = inputs(7)
+
+      if (n_var == 8) then
+      real(wp)    :: dphidx
+      real(wp)    :: dphidy
+      real(wp)    :: dphidz
+      real(wp)    :: gdiff
       gdiff  = inputs(8)
+      end if
+
 
       !save the old stat in P
       P = qr
@@ -1876,7 +1903,7 @@ module lusgs
     end function KKLFlux
 
 
-    subroutine update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update the RANS (SA) equation with LU-SGS
       implicit none
 
@@ -1899,7 +1926,8 @@ module lusgs
       type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
       !< Input varaible which stores K faces' area and unit normal
       integer :: i,j,k
-
+      integer :: n1 = 6
+      integer :: n2 = 7
       select case(trim(scheme%scalar_transport))
       case('grad_diffusion')
         n1 = n1 + 1
@@ -2057,13 +2085,13 @@ module lusgs
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
 
-              if (n1 == 7) then
-                Flist1(7) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(7) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(7) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(7) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(7) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(7) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 8) then
+                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
               NewIminusFlux     = SAFlux(Q1, Q0, DQ1, Flist1)
@@ -2073,12 +2101,12 @@ module lusgs
               OldJminusFlux     = SAFlux(Q2, Q0, DQ0, Flist2)
               OldKminusFlux     = SAFlux(Q3, Q0, DQ0, Flist3)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -2220,13 +2248,13 @@ module lusgs
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
 
-              if (n1 == 7) then
-                Flist1(7) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(7) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(7) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(7) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(7) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(7) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 8) then
+                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
               NewIminusFlux     = SAFlux(Q4, Q0, DQ4, Flist4)
@@ -2236,12 +2264,12 @@ module lusgs
               OldJminusFlux     = SAFlux(Q5, Q0, DQ0, Flist5)
               OldKminusFlux     = SAFlux(Q6, Q0, DQ0, Flist6)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -2317,7 +2345,7 @@ module lusgs
               end if
 
               ! add new change into conservative solution
-              conservativeQ(1:6) = conservativeQ(1:6) + delQ(i,j,k,1:6)
+              conservativeQ(1:n1) = conservativeQ(1:n1) + delQ(i,j,k,1:n1)
 
               ! convert back conservative to primitive
               qp(i,j,k,1) = conservativeQ(1)
@@ -2345,12 +2373,19 @@ module lusgs
       real(wp), dimension(1:n_var), intent(in) :: qr !right state
       !conservative form of updated neighbour
       real(wp), dimension(1:n_var), intent(in) :: du
-      real(wp), dimension(1:8)    , intent(in) :: inputs
+      !real(wp), dimension(1:8)    , intent(in) :: inputs
       real(wp), dimension(1:n_var)             :: Flux
       real(wp), dimension(1:n_var)             :: SAFlux
       real(wp), dimension(1:n_var)             :: U ! conservative variables
       real(wp), dimension(1:n_var)             :: W ! new primitive variables
       real(wp), dimension(1:n_var)             :: P ! primitive variables of right cell
+
+      integer(wp) :: n2 = 7
+      if n_var == 7 then
+      n2 = n2 + 1
+      end if
+      real(wp), dimension(1:n2)    , intent(in) :: inputs
+
 
       !for extraction of the inputs
       real(wp) :: area
@@ -2377,13 +2412,6 @@ module lusgs
       real(wp)    :: dtvdx
       real(wp)    :: dtvdy
       real(wp)    :: dtvdz
-      if (n_var == 7) then
-      real(wp)    :: dphidx
-      real(wp)    :: dphidy
-      real(wp)    :: dphidz
-      real(wp)    :: gdiff
-
-      end if
       real(wp)    :: T1, T2
       real(wp)    :: uface
       real(wp)    :: vface
@@ -2412,7 +2440,15 @@ module lusgs
       volume = inputs(5)
       mmu    = inputs(6)
       tmu    = inputs(7)
+
+      if (n_var == 7) then
+      real(wp)    :: dphidx
+      real(wp)    :: dphidy
+      real(wp)    :: dphidz
+      real(wp)    :: gdiff
       gdiff  = inputs(8)
+      end if
+
 
       !save the old stat in P
       P = qr
@@ -2518,7 +2554,7 @@ module lusgs
     end function SAFlux
 
 
-    subroutine update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update the RANS (LCTM2015 transition model with SST2003) equation with LU-SGS
       implicit none
       type(schemetype), intent(in) :: scheme
@@ -2691,7 +2727,7 @@ module lusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
-              if (n1 == 9) then
+              if (n2 == 9) then
                 Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
                 Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
                 Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
@@ -2707,12 +2743,12 @@ module lusgs
               OldJminusFlux     = lctm2015Flux(Q2, Q0, DQ0, Flist2)
               OldKminusFlux     = lctm2015Flux(Q3, Q0, DQ0, Flist3)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -2848,7 +2884,7 @@ module lusgs
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
 
-              if (n1 == 9) then
+              if (n2 == 9) then
                 Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
                 Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
                 Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
@@ -2864,12 +2900,12 @@ module lusgs
               OldJminusFlux     = lctm2015Flux(Q5, Q0, DQ0, Flist5)
               OldKminusFlux     = lctm2015Flux(Q6, Q0, DQ0, Flist6)
 
-              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1, C1, C0)
-              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2, C2, C0)
-              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3, C3, C0)
-              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4, C4, C0)
-              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5, C5, C0)
-              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6, C6, C0)
+              LambdaTimesArea(1)= SpectralRadius(Q1, Q0, Flist1(1:7), C1, C0)
+              LambdaTimesArea(2)= SpectralRadius(Q2, Q0, Flist2(1:7), C2, C0)
+              LambdaTimesArea(3)= SpectralRadius(Q3, Q0, Flist3(1:7), C3, C0)
+              LambdaTimesArea(4)= SpectralRadius(Q4, Q0, Flist4(1:7), C4, C0)
+              LambdaTimesArea(5)= SpectralRadius(Q5, Q0, Flist5(1:7), C5, C0)
+              LambdaTimesArea(6)= SpectralRadius(Q6, Q0, Flist6(1:7), C6, C0)
 
 
               ! multiply above flux with area to get correct values
@@ -2970,13 +3006,19 @@ module lusgs
       real(wp), dimension(1:n_var), intent(in) :: qr !right state
       !conservative form of updated neighbour
       real(wp), dimension(1:n_var), intent(in) :: du
-      real(wp), dimension(1:9)    , intent(in) :: inputs
+      !real(wp), dimension(1:9)    , intent(in) :: inputs
       real(wp), dimension(1:n_var)             :: Flux
       real(wp), dimension(1:n_var)             :: lctm2015flux
       real(wp), dimension(1:n_var)             :: U ! conservative variables
       real(wp), dimension(1:n_var)             :: W ! new primitive variables
       real(wp), dimension(1:n_var)             :: P ! primitive variables of right cell
 
+
+      integer(wp) :: n2 = 8
+      if n_var == 9 then
+      n2 = n2 + 1
+      end if
+      real(wp), dimension(1:n2)    , intent(in) :: inputs
       !for extraction of the inputs
       real(wp) :: area
       real(wp) :: nx
@@ -3008,11 +3050,6 @@ module lusgs
       real(wp)    :: dtgmdx
       real(wp)    :: dtgmdy
       real(wp)    :: dtgmdz
-      if (n_var == 9) then
-      real(wp)    :: dphidx
-      real(wp)    :: dphidy
-      real(wp)    :: dphidz
-      real(wp)    :: gdiff
       real(wp)    :: T1, T2
       real(wp)    :: uface
       real(wp)    :: vface
@@ -3044,8 +3081,15 @@ module lusgs
       mmu    = inputs(6)
       tmu    = inputs(7)
       F1     = inputs(8)
-      gdiff  = inputs(9)
 
+
+      if (n_var == 9) then
+      real(wp)    :: dphidx
+      real(wp)    :: dphidy
+      real(wp)    :: dphidz
+      real(wp)    :: gdiff
+      gdiff  = inputs(9)
+      end if
       !save the old stat in P
       P = qr
 

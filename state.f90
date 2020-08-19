@@ -133,7 +133,7 @@ module state
                 case('none')
                     continue
                     case('grad_diffusion')
-                        flow%phi_inf = 0.0
+                        flow%phi_inf = flow%phi_inf
             end select
 
         end subroutine init_infinity_values
@@ -283,7 +283,7 @@ module state
 
               case('grad_diffusion')
 
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 9) = flow%phi_inf
+                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, dims%n_var) = flow%phi_inf
 
               case('none')
                 !do nothing
@@ -328,17 +328,19 @@ module state
           !Transition modeling
           select case(trim(scheme%transition))
             case('lctm2015')
-              n_var = n_var + 1
+              !n_var = n_var + 1
+              n_var = 8
 
             case('bc', 'none')
-              n_var = n_var + 0
+              !n_var = n_var + 0
+              continue
 
             case DEFAULT
               Fatal_error
 
               select case(trim(scheme%scalar_transport))
               case('grad_diffusion')
-                n_var = n_var+1
+                n_var = n_var + 1
                 case('none')
                     n_var = n_var + 0
                     case DEFAULT

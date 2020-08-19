@@ -170,14 +170,14 @@ module plusgs
 
       select case(trim(scheme%turbulence))
         case('none')
-          call update_laminar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+          call update_laminar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
 
         case('sst', 'sst2003')
           select case(trim(scheme%transition))
             case('none', 'bc')
-              call update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+              call update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
             case('lctm2015')
-              call update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+              call update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
             case DEFAULT
               Fatal_error
           end select
@@ -186,28 +186,28 @@ module plusgs
 !          call update_KKL_variables()
 
         case('sa', 'saBC')
-          call update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+          call update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
 
         case Default
           Fatal_error
 
       end select
 
-      select case(trim(scheme%scalar_transport))
-      case('grad_diffusion')
-        call update_scalar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
-        case('none')
-            continue
-            case DEFAULT
-                Fatal_error
-      end select
+      !select case(trim(scheme%scalar_transport))
+      !case('grad_diffusion')
+      !  call update_scalar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+      !  case('none')
+      !      continue
+      !      case DEFAULT
+      !          Fatal_error
+      !end select
 
 
     end subroutine update_with_plusgs
 
 
 
-    subroutine update_laminar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_laminar_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update laminar flow with LU-SGS scheme
       implicit none
       type(schemetype), intent(in) :: scheme
@@ -897,7 +897,7 @@ module plusgs
     end function SpectralRadius
 
 
-    subroutine update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_SST_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update the RANS (SST) equation with LU-SGS
       implicit none
       type(schemetype), intent(in) :: scheme
@@ -1067,13 +1067,13 @@ module plusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
-              if (n1 == 8) then
-                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 9) then
+                Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(9) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(9) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(9) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
 
@@ -1284,13 +1284,13 @@ module plusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
-              if (n1 == 8) then
-                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 9) then
+                Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(9) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(9) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(9) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
               NewIminusFlux     = SSTFlux(Q4, Q0, DQ4, Flist4)
@@ -1653,7 +1653,7 @@ module plusgs
 
     end function SSTFlux
 
-    subroutine update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_SA_variables(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update the RANS (SA) equation with LU-SGS
       implicit none
 
@@ -1839,13 +1839,13 @@ module plusgs
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
 
-              if (n1 == 7) then
-                Flist1(7) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(7) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(7) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(7) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(7) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(7) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 8) then
+                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
 
@@ -1923,7 +1923,6 @@ module plusgs
               PrecondInv(7,4) = 0.0 - factor*s*(-w)
               PrecondInv(7,5) = 0.0 - factor*s*(1.)
               PrecondInv(7,6) = 0.0 - factor*s*(-1.)
-              PrecondInv(7,7) = 0.0 - factor*s*(0.)
               PrecondInv(1,7) = 0.0 - factor*s*(0.)
               PrecondInv(2,7) = 0.0 - factor*u*(0.)
               PrecondInv(3,7) = 0.0 - factor*v*(0.)
@@ -2077,13 +2076,13 @@ module plusgs
               Flist6(6) = 0.5*(   mmu(i  , j  , k+1) +    mmu(i,j,k))
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
 
-              if (n1 == 7) then
-                Flist1(7) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
-                Flist2(7) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
-                Flist3(7) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
-                Flist4(7) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
-                Flist5(7) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
-                Flist6(7) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
+              if (n2 == 8) then
+                Flist1(8) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
+                Flist2(8) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
+                Flist3(8) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
+                Flist4(8) = 0.5*( gdiff(i+1, j  , k  ) +   gdiff(i,j,k))
+                Flist5(8) = 0.5*( gdiff(i, j+1  , k  ) +   gdiff(i,j,k))
+                Flist6(8) = 0.5*( gdiff(i, j  , k+1  ) +   gdiff(i,j,k))
               end if
 
 
@@ -2162,7 +2161,6 @@ module plusgs
               PrecondInv(7,4) = 0.0 - factor*s*(-w)
               PrecondInv(7,5) = 0.0 - factor*s*(1.)
               PrecondInv(7,6) = 0.0 - factor*s*(-1.)
-              PrecondInv(7,7) = 0.0 - factor*s*(0.)
               PrecondInv(1,7) = 0.0 - factor*s*(0.)
               PrecondInv(2,7) = 0.0 - factor*u*(0.)
               PrecondInv(3,7) = 0.0 - factor*v*(0.)
@@ -2453,7 +2451,7 @@ module plusgs
     end function SAFlux
 
 
-    subroutine update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, dims)
+    subroutine update_lctm2015(qp, residue, delta_t, cells, Ifaces, Jfaces, Kfaces, scheme, dims)
       !< Update the RANS/transition (LCTM2015) equation with LU-SGS
       implicit none
 
@@ -2535,7 +2533,7 @@ module plusgs
         real(wp)                     :: u,v,w,r,p,kk,ww,H,s,im
         real(wp)                     :: factor
         real(wp), dimension(1:n1,1:n1) :: PrecondInv
-        real(wp), dimension(1:8,1:8) :: Identity
+        real(wp), dimension(1:n1,1:n1) :: Identity
 
         ! intermittency
         real(wp) :: Fonset1
@@ -2557,7 +2555,7 @@ module plusgs
 
         !Identity matrix
         Identity = 0.0
-        do i = 1,8
+        do i = 1,n1
             Identity(i,i) = 1.0
         end do
 
@@ -2645,7 +2643,7 @@ module plusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
-              if (n1 == 9) then
+              if (n2 == 9) then
                 Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
                 Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
                 Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))
@@ -2754,12 +2752,12 @@ module plusgs
               !storing D in Iflux array for backward sweep
               !F_p(i,j,k,1) = D
 
-              deltaU(1:8) = -matmul(PrecondInv,residue(i,j,k,1:8)) &
-                - 0.5*((matmul(PrecondInv,DelIminusFlux) - LambdaTimesArea(1)*delQstar(i-1,j,k,1:8)) &
-                     + (matmul(PrecondInv,DelJminusFlux) - LambdaTimesArea(2)*delQstar(i,j-1,k,1:8)) &
-                     + (matmul(PrecondInv,DelKminusFlux) - LambdaTimesArea(3)*delQstar(i,j,k-1,1:8)) )
+              deltaU(1:n1) = -matmul(PrecondInv,residue(i,j,k,1:n1)) &
+                - 0.5*((matmul(PrecondInv,DelIminusFlux) - LambdaTimesArea(1)*delQstar(i-1,j,k,1:n1)) &
+                     + (matmul(PrecondInv,DelJminusFlux) - LambdaTimesArea(2)*delQstar(i,j-1,k,1:n1)) &
+                     + (matmul(PrecondInv,DelKminusFlux) - LambdaTimesArea(3)*delQstar(i,j,k-1,1:n1)) )
 
-              delQstar(i,j,k,1:8) = deltaU(1:8)/D
+              delQstar(i,j,k,1:n1) = deltaU(1:n1)/D
             end do
           end do
         end do
@@ -2845,7 +2843,7 @@ module plusgs
               Flist6(7) = 0.5*(   tmu(i  , j  , k+1) +    tmu(i,j,k))
               Flist6(8) = 0.5*(sst_F1(i  , j  , k+1) + sst_F1(i,j,k))
 
-              if (n1 == 9) then
+              if (n2 == 9) then
                 Flist1(9) = 0.5*( gdiff(i-1, j  , k  ) +   gdiff(i,j,k))
                 Flist2(9) = 0.5*( gdiff(i, j-1  , k  ) +   gdiff(i,j,k))
                 Flist3(9) = 0.5*( gdiff(i, j  , k-1  ) +   gdiff(i,j,k))

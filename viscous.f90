@@ -800,10 +800,13 @@ module viscous
       real(wp) :: ny
       real(wp) :: nz
       real(wp) :: area
+      integer(wp) :: n_var
       integer :: i, j, k
       integer :: ii, jj, kk
       !--- scalar variable requirement ---!
       real(wp) :: dphidx, dphidy, dphidz
+
+      n_var = dims%n_var
 
       ii = flags(1)
       jj = flags(2)
@@ -831,7 +834,7 @@ module viscous
           d_LR = sqrt(delx*delx + dely*dely + delz*delz)
 
           ! difference in state across face
-          delphi = qp(i, j, k, 9) - qp(i-ii, j-jj, k-kk, 9)
+          delphi = qp(i, j, k, n_var) - qp(i-ii, j-jj, k-kk, n_var)
 
           !normal_comp   = ( delta(phi) - (grad(phi).dot.delR) )/magnitudeR
           !new grad(phi) =  grad(phi) + correction(normal_comp.dot.delR/magnitudeR)
@@ -848,8 +851,6 @@ module viscous
             mut_f = 0.0
           end if
 
-          !rhoface  = 0.5 * (qp(i-ii, j-jj, k-kk, 1) + qp(i, j, k, 1))
-
 
           ! calling some element from memory and keep them handy for calculation
           nx    = faces(i,j,k)%nx
@@ -858,7 +859,7 @@ module viscous
           area  = faces(i,j,k)%A
 
           ! adding viscous fluxes to stored convective flux
-          F(i, j, k, dims%n_var) = F(i, j, k, dims%n_var) - area*((diff_f+mut_f/sc)*(dphidx*nx + dphidy*ny + dphidz*nz))
+          F(i, j, k, n_var) = F(i, j, k, n_var) - area*((diff_f+mut_f/sc)*(dphidx*nx + dphidy*ny + dphidz*nz))
 
         end do
        end do
