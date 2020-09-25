@@ -27,9 +27,13 @@ module update
   use gradients  ,only :   gradw_x
   use gradients  ,only :   gradw_y
   use gradients  ,only :   gradw_z
+  use gradients  ,only :   gradphi_x
+  use gradients  ,only :   gradphi_y
+  use gradients  ,only :   gradphi_z
   use wall_dist, only : dist
   use viscosity, only : mu
   use viscosity, only : mu_t
+  use diffusivity, only : diff
 
   use utils, only: alloc
 
@@ -41,6 +45,7 @@ module update
   use scheme,                         only: compute_fluxes
   use gradients,                      only: evaluate_all_gradients
   use viscosity                      ,only: calculate_viscosity
+  use diffusivity,                    only: calculate_diffusivity
   use viscous,                        only: compute_viscous_fluxes
   use scheme,                         only: compute_residue
   use source,                         only: add_source_term_residue
@@ -83,7 +88,7 @@ module update
 
 
       subroutine setup_update(control, scheme,flow, dims)
-        !< Allocate memory to variables required based 
+        !< Allocate memory to variables required based
         !< on the time-integration scheme.
         implicit none
         type(controltype), intent(in) :: control
@@ -158,12 +163,12 @@ module update
         type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
         !< Input cell quantities: volume
         type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
-        !< Store face quantites for I faces 
+        !< Store face quantites for I faces
         type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
-        !< Store face quantites for J faces 
+        !< Store face quantites for J faces
         type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
-        !< Store face quantites for K faces 
-        real(wp) :: CFL 
+        !< Store face quantites for K faces
+        real(wp) :: CFL
         CFL = control%CFL
         !finding the updated Temperature using ideal gas law
         !T=P/(R_gas*Rho)
@@ -172,45 +177,45 @@ module update
             case ("none")
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
               call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims) ! has to be after get_..._Residue()
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1. ,1., .FALSE.) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1. ,1., .FALSE.)
             case ("RK4")
               R_store=0.
               U_store = qp
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
               call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims) ! has to be after get_..._Residue()
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 1., .FALSE., R_store, U_store) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 1., .FALSE., R_store, U_store)
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 2., .FALSE., R_store, U_store) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 2., .FALSE., R_store, U_store)
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 2., .FALSE., R_store, U_store) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 2., .FALSE., R_store, U_store)
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1./6., 1., .TRUE. , R_store, U_store) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1./6., 1., .TRUE. , R_store, U_store)
             case("RK2")
               R_store=0.
               U_store = qp
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
               call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims) ! has to be after get_..._Residue()
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 1., .FALSE., R_store, U_store) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 1., .FALSE., R_store, U_store)
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 1., .TRUE., R_store, U_store) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 1., .TRUE., R_store, U_store)
             case ("TVDRK3")
               U_store = qp
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
               call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims) ! has to be after get_..._Residue()
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.)
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.)
               qp = 0.75*U_store + 0.25*qp
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.)
               qp = (1./3.)*U_store + (2./3.)*qp
             case ("TVDRK2")
               U_store = qp
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
               call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims) ! has to be after get_..._Residue()
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.)
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 1.)
               qp = 0.5*U_store + 0.5*qp
             case ("implicit")
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
@@ -226,7 +231,7 @@ module update
       end subroutine get_next_solution
 
       subroutine update_with(qp, residue, delta_t, cells, scheme, flow, type, time_factor, store_factor, use, Rn, un)
-        !< A generalized scheme to updat the solution explicitly using
+        !< A generalized scheme to update the solution explicitly using
         !< any RK method and even first order euler explicit.
         implicit none
         real(wp), dimension(-2:imx+2,-2:jmx+2,-2:kmx+2,1:n_var), intent(inout), target:: qp
@@ -264,11 +269,11 @@ module update
         real(wp) :: scap
         real(wp) :: rsa
         real(wp) :: kd2
-        real(wp) :: xi 
+        real(wp) :: xi
         real(wp) :: mass_residue
         real(wp) :: x_mom_residue, y_mom_residue, z_mom_residue
         real(wp) :: energy_residue
-        real(wp) :: TKE_residue, Omega_residue, kl_residue
+        real(wp) :: TKE_residue, Omega_residue, kl_residue, phi_residue
 
         if(present(time_factor)) TF=time_factor
         if(present(store_factor)) SF=store_factor
@@ -293,11 +298,11 @@ module update
                   y_mom_residue = residue(i,j,k,3)
                   z_mom_residue = residue(i,j,k,4)
                   energy_residue = residue(i,j,k,5)
-            
+
                   u1(1:n_var) = Quse(i,j,k,1:n_var)
-            
+
                   ! finding primitive residue
-                  R(1) = mass_residue
+                  R(1) =  mass_residue
                   R(2) = -1*(u1(2)/u1(1))*mass_residue + x_mom_residue/u1(1)
                   R(3) = -1*(u1(3)/u1(1))*mass_residue + y_mom_residue/u1(1)
                   R(4) = -1*(u1(4)/u1(1))*mass_residue + z_mom_residue/u1(1)
@@ -306,7 +311,7 @@ module update
                          -(flow%gm-1.)*u1(3)*y_mom_residue               &
                          -(flow%gm-1.)*u1(4)*z_mom_residue               &
                          +(flow%gm-1.)*energy_residue
-            
+
                   select case(scheme%turbulence)
                     case('none')
                       !do nothing
@@ -334,18 +339,29 @@ module update
                     case DEFAULT
                       Fatal_error
                   end select
-            
-                        
+
+                select case(scheme%scalar_transport)
+                case('none')
+                    !do nothing
+                    continue
+                    case('grad_diffusion')
+                        phi_residue = residue(i,j,k,n_var)
+                        R(n_var) = -(u1(n_var)/u1(1))*mass_residue + phi_residue/u1(1)
+                    case DEFAULT
+                      Fatal_error
+                end select
+
+
                  !check if user want to store residue
                   if(present(Rn)) then
                     Rn(i,j,k,1:n_var) = Rn(i,j,k,1:n_var) + SF*R(1:n_var)
                     if(TU) R(:) = Rn(i,j,k,:)
                   end if
-                 
-            
+
+
                  !update
                  u2(:) = u1(:) - R(:)*(TF*delta_t(i,j,k)/cells(i,j,k)%volume)
-            
+
                   !check solution for non pyhysical results
                   if((u2(1) < 0.) .or. (u2(5)) < 0.)then
                     Fatal_error
@@ -359,11 +375,18 @@ module update
                        ! do nothing
                        continue
                     end select
+
+                    select case(trim(scheme%scalar_transport))
+                     case('grad_diffusion')
+                       if(u2(n_var)>0.) qp(i,j,k,n_var) = u2(n_var)
+                    case DEFAULT
+                      continue
+                    end select
                   end if
                 end do
               end do
             end do
-            
+
           case('conservative')
             !include "update_conservative.inc"
 
@@ -386,7 +409,7 @@ module update
                   u1(5) = (u1(5)/(flow%gm-1.) + 0.5*sum(u1(2:4)**2))/u1(1) + KE
 
                  ! get R
-                  R(1:n_var) = residue(i,j,k,1:n_var) 
+                  R(1:n_var) = residue(i,j,k,1:n_var)
                   ! point implicit destruction term
                   select case(trim(scheme%turbulence))
                     case('none')
@@ -477,6 +500,15 @@ module update
                        ! do nothing
                        continue
                     end select
+                    select case(scheme%scalar_transport)
+                     case('grad_diffusion')
+                        if (u2(n_var)>=0.) then
+                            qp(i,j,k,n_var) = u2(n_var)
+                        end if
+                    case DEFAULT
+                        !do nothing
+                        continue
+                        end select
                   end if
                   !print*, i,j, R(1:n_var)
 
@@ -495,8 +527,8 @@ module update
       subroutine get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
         !< For each iteration it apply boundary conditions,
         !< use higher order method to reconstruct state at
-        !< face, evalute fluxes at each face, calculate 
-        !< inviscid residual, and introuduce additional 
+        !< face, evalute fluxes at each face, calculate
+        !< inviscid residual, and introuduce additional
         !< residual due to  viscosity, turbulence and source
         !< terms.
         implicit none

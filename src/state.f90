@@ -6,9 +6,9 @@ module state
   !< variables at the cell-center points.
     !-------------------------------------------------------------------
     ! The state module contains the state variables and the methods that
-    ! act on them. 
+    ! act on them.
     !-------------------------------------------------------------------
-    
+
 #include "debug.h"
 #include "error.h"
 
@@ -32,8 +32,8 @@ module state
         subroutine setup_state(files, qp, control, scheme, flow, dims)
             !< Setup the state module.
             !< This subroutine should be run before the state variables
-            !< are initilized. This subroutine allocates the memory for 
-            !< state variables and sets up the aliases to refer to the 
+            !< are initilized. This subroutine allocates the memory for
+            !< state variables and sets up the aliases to refer to the
             !< components of the state
             !-----------------------------------------------------------
 
@@ -81,7 +81,7 @@ module state
             !< finite-volume Schemes: turbulence, transition model, etc
             type(flowtype), intent(inout) :: flow
             !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
-            
+
             DebugCall("init_infinity_values")
 
             flow%vel_mag = sqrt(flow%x_speed_inf**2 + flow%y_speed_inf**2 + flow%z_speed_inf**2)
@@ -90,7 +90,7 @@ module state
             flow%Turb_intensity_inf = flow%tu_inf/100
 
             select case (trim(scheme%turbulence))
-                
+
                 case ("none")
                     continue
 
@@ -129,11 +129,17 @@ module state
 
             end select
 
+            !case select(scheme%scalar_transport)
+            !    case('none')
+            !        continue
+            !        case('grad_diffusion')
+            !            flow%phi_inf = flow%phi_inf
+            !end select
 
         end subroutine init_infinity_values
 
 
-        
+
         function sound_speed_inf(flow) result(a)
             !< Return the free stream speed of sound.
             !-----------------------------------------------------------
@@ -152,7 +158,7 @@ module state
 
         subroutine initstate(files, qp, control, scheme, flow, dims)
             !< Initialize the state.
-            !< If load file(start_from) is 0, then the state should be 
+            !< If load file(start_from) is 0, then the state should be
             !< set to the infinity values. Otherwise, read the state_file
             !< to get the state values
             !-----------------------------------------------------------
@@ -170,7 +176,7 @@ module state
             !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
             !< Store primitive variable at cell center
-            
+
             DebugCall("initstate")
 
             call  verify_write_control(control, scheme, flow)
@@ -195,7 +201,7 @@ module state
         subroutine init_state_with_infinity_values(qp, scheme, flow, dims)
             !< Initialize the state based on the infinity values
             !-----------------------------------------------------------
-            
+
             implicit none
             type(schemetype), intent(in) :: scheme
             !< finite-volume Schemes
@@ -205,7 +211,7 @@ module state
             !< Extent of the domain:imx,jmx,kmx
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
             !< Store primitive variable at cell center
-            
+
             DebugCall("init_state_with_infinity_values")
 
             !density = density_inf
@@ -224,7 +230,7 @@ module state
                 case ("none")
                     !include nothing
                     continue
-                
+
                 case ("sst", "sst2003", "bsl", "des-sst", "kw")
                     !tk = tk_inf
                     qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 6) = flow%tk_inf
@@ -272,7 +278,22 @@ module state
                 Fatal_error
 
             end Select
-            
+
+            select case(trim(scheme%scalar_transport))
+
+              case('grad_diffusion')
+
+                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, dims%n_var) = flow%phi_inf
+
+              case('none')
+                !do nothing
+                continue
+
+              case DEFAULT
+                Fatal_error
+
+            end Select
+
         end subroutine init_state_with_infinity_values
 
 
@@ -294,7 +315,7 @@ module state
 
             case('sa', 'saBC')
               n_var=6
-              
+
             case('sst', "sst2003", 'bsl', 'kw', 'ke', 'kkl', 'Des-kw')
               n_var=7
 
@@ -307,13 +328,24 @@ module state
           !Transition modeling
           select case(trim(scheme%transition))
             case('lctm2015')
-              n_var = n_var + 1
+              !n_var = n_var + 1
+              n_var = 8
 
             case('bc', 'none')
-              n_var = n_var + 0
+              !n_var = n_var + 0
+              continue
 
             case DEFAULT
               Fatal_error
+
+              select case(trim(scheme%scalar_transport))
+              case('grad_diffusion')
+                n_var = n_var + 1
+                case('none')
+                    n_var = n_var + 0
+                    case DEFAULT
+                        Fatal_error
+              end select
 
           end Select
 

@@ -19,6 +19,8 @@ module solver
   use dump_solution, only : checkpoint
   use viscosity    , only : setup_viscosity
   use viscosity    , only : calculate_viscosity
+  use diffusivity  , only : setup_diffusivity
+  use diffusivity  , only : calculate_diffusivity
   use wall         , only : write_surfnode
   use bc,            only : setup_bc
   use time ,         only : setup_time
@@ -32,7 +34,7 @@ module solver
     type(extent) :: dims
     !< Extent of the domain:imx,jmx,kmx
     type(nodetype), dimension(:,:,:), allocatable :: nodes
-    !< Grid points 
+    !< Grid points
     type(celltype), dimension(:,:,:), allocatable :: cells
     !< Cell center quantities: volume, cellCenter
     type(facetype), dimension(:,:,:), allocatable :: Ifaces, Jfaces, Kfaces
@@ -47,7 +49,7 @@ module solver
     !< Files' name and handler
     type(boundarytype) :: boundary
     !< boundary conditions and fixed values
-    real(wp), dimension(:, :, :, :), allocatable :: qp           
+    real(wp), dimension(:, :, :, :), allocatable :: qp
     !< Store primitive variable at cell center
     real(wp), dimension(:, :, :   ), allocatable :: Temp
     !< Store Temperature variable at cell center
@@ -59,7 +61,7 @@ module solver
     !< Store fluxes throught the K faces
     real(wp), public, dimension(:, :, :, :), allocatable, target :: residue
     !< Store residue at each cell-center
-    real(wp), dimension(:, :, :), allocatable     :: delta_t  
+    real(wp), dimension(:, :, :), allocatable     :: delta_t
     !< Local time increment value at each cell center
 
     ! Public methods
@@ -104,19 +106,20 @@ module solver
         subroutine setup_solver()
           !< Call to allocate memoery and initialize domain
           !--------------------------------------------------
-            
+
             implicit none
             integer :: ierr
 
             DebugCall('setup_solver: Start')
             call get_process_data(control) ! parallel calls
             call read_layout_file(files, control, boundary) ! reads layout file calls
-            
+
             call read_input_and_controls(files, control, schemes, flow)
             call setup_grid(files, nodes, control, boundary, dims)
             call setup_geometry(cells, Ifaces, Jfaces, Kfaces, nodes, boundary, dims)
             !call setup_viscosity(mu, mu_t, schemes, flow, dims)
             call setup_viscosity(schemes, flow, dims)
+            call setup_diffusivity(schemes, flow, dims)
             call setup_state(files, qp, control, schemes, flow, dims)
             allocate(Temp(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2))
             call setup_gradients(control,schemes,flow,dims)
@@ -148,7 +151,7 @@ module solver
           !--------------------------------------------------
 
             implicit none
-            
+
             DebugCall('destroy_solver')
             call destroy_time(control)
 
@@ -157,16 +160,16 @@ module solver
         subroutine initmisc()
           !< Initilize miscellaneous variables
           !----------------------------------
-            
+
             implicit none
-            
+
             DebugCall('initmisc')
 
             control%current_iter = 0
 
         end subroutine initmisc
 
-        
+
         subroutine iterate_one_more_time_step()
             !< Perform one time step iteration
             !  This subroutine performs one iteration by stepping through

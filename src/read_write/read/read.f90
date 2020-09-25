@@ -41,9 +41,9 @@ module read
         !< Extract the next token from the config file
         !<
         !< Each token is on a separate line.
-        !< There may be multiple comments (lines beginning with #) 
+        !< There may be multiple comments (lines beginning with #)
         !< and blank lines in between.
-        !< The purpose of this subroutine is to ignore all these 
+        !< The purpose of this subroutine is to ignore all these
         !< lines and return the next "useful" line.
         !-----------------------------------------------------------
 
@@ -183,7 +183,7 @@ module read
         read(files%SCHEME_FILE_UNIT,*)
         read(files%SCHEME_FILE_UNIT,*)
         read(files%SCHEME_FILE_UNIT,*)
-       
+
         ! read scheme name
         call get_next_token(files%SCHEME_FILE_UNIT, buf)
         read(buf, *) scheme%scheme_name
@@ -206,7 +206,7 @@ module read
 
         ! read turbulent limiter
         call get_next_token(files%SCHEME_FILE_UNIT, buf)
-        read(buf, *) scheme%itlimiter_switch,scheme%jtlimiter_switch,scheme%ktlimiter_switch 
+        read(buf, *) scheme%itlimiter_switch,scheme%jtlimiter_switch,scheme%ktlimiter_switch
         DebugInfo('ilimiter switch = '//trim(buf) )
         DebugInfo('jlimiter switch = '//trim(buf) )
         DebugInfo('klimiter switch = '//trim(buf) )
@@ -216,10 +216,12 @@ module read
         read(buf, *) scheme%turbulence
         DebugInfo('Turbulence Model = '//trim(buf))
 
+
         ! read transition model
         call get_next_token(files%SCHEME_FILE_UNIT, buf)
         read(buf, *) scheme%transition
         DebugInfo('Transition Model = '//trim(buf))
+
 
         ! read time stepping method
         call get_next_token(files%SCHEME_FILE_UNIT, buf)
@@ -236,10 +238,20 @@ module read
         read(buf, *) scheme%time_step_accuracy
         DebugInfo('time_step_accuracy  = '//trim(buf))
 
+
         ! read higher order boundary
         call get_next_token(files%SCHEME_FILE_UNIT, buf)
         read(buf, *) scheme%accur
         DebugInfo('higher order boundary  = '//trim(buf))
+
+        !read scalar transport model
+        call get_next_token(files%SCHEME_FILE_UNIT, buf)
+        read(buf, *) scheme%scalar_transport
+        DebugInfo('Scalar Transport Model = '//trim(buf))
+
+
+
+
 
 
         close(files%SCHEME_FILE_UNIT)
@@ -264,7 +276,7 @@ module read
         read(files%FLOW_FILE_UNIT,*)
         read(files%FLOW_FILE_UNIT,*)
         read(files%FLOW_FILE_UNIT,*)
-       
+
         ! read number of variable
         call get_next_token(files%FLOW_FILE_UNIT, buf)
         read(buf, *) control%n_var
@@ -310,6 +322,7 @@ module read
         read(buf, *) flow%tgm_inf
         DebugInfo('free_stream_Intermittency = '//trim(buf))
 
+
         ! read reference viscosity
         call get_next_token(files%FLOW_FILE_UNIT, buf)
         read(buf, *) flow%mu_ref
@@ -335,6 +348,20 @@ module read
         read(buf, *) flow%Pr, flow%tPr
         DebugInfo('Prandtl Number = '//trim(buf))
 
+        call get_next_token(files%FLOW_FILE_UNIT, buf)
+        read(buf, *) flow%phi_inf
+        DebugInfo('Scalar freestream = '//trim(buf))
+
+        call get_next_token(files%FLOW_FILE_UNIT, buf)
+        read(buf, *) flow%diff_ref
+        DebugInfo('Scalar diffusivity= '//trim(buf))
+
+
+        !variation of diffusion coefficient
+        call get_next_token(files%FLOW_FILE_UNIT, buf)
+        read(buf, *) flow%diff_variation
+        DebugInfo('diff_variation = '//trim(buf))
+
         ! read gamma
         call get_next_token(files%FLOW_FILE_UNIT, buf)
         read(buf, *) flow%gm
@@ -344,13 +371,16 @@ module read
         call get_next_token(files%FLOW_FILE_UNIT, buf)
         read(buf, *) flow%R_gas
         DebugInfo('R_gas = '//trim(buf))
-          
+
+
+
+
 
         close(files%FLOW_FILE_UNIT)
 
       end subroutine read_flow
 
-        
+
 
       subroutine read_output_control(files, control)
         !< Read output_contorl.md file
@@ -361,7 +391,7 @@ module read
         character(len=64) :: buf
         integer :: ios
         logical :: ok
-        
+
         call get_rw_count(files, control)
         inquire(files%OUTIN_FILE_UNIT, opened=ok)
         if(ok)  close(files%OUTIN_FILE_UNIT)
@@ -435,7 +465,7 @@ module read
           control%w_list(3) = "Pressure"
         end if
 
-        ! read list dimesnion 
+        ! read list dimesnion
         do while(.true.)
           read(files%OUTIN_FILE_UNIT, *, iostat=ios) buf
           if(trim(buf)=='{') EXIT

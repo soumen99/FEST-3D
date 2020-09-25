@@ -11,7 +11,7 @@ module check_output_control
   contains
 
     subroutine verify_write_control(control, scheme, flow)
-      !< Verify all the variable being asked to write in the output file. 
+      !< Verify all the variable being asked to write in the output file.
       !< This is a fail-safe subroutine which do not allow to write the incorrect input variable
       implicit none
       type(controltype), intent(inout) :: control
@@ -23,13 +23,13 @@ module check_output_control
       do n = 1,control%w_count
 
         select case (trim(lcase(control%w_list(n))))
-        
+
           case('velocity','vel','speed','u','v')
             control%w_list(n) = "Velocity"
 
           case('density','rho')
             control%w_list(n) = "Density"
-          
+
           case('pressure','presssure','p')
             control%w_list(n) = "Pressure"
 
@@ -40,7 +40,7 @@ module check_output_control
               print*, err//trim(control%w_list(n))//" to file"
               control%w_list(n) = "do not write"
             end if
-            
+
           case('mu_t','turbulent_viscosity','mut')
             if (scheme%turbulence/='none') then
               control%w_list(n) = "Mu_t"
@@ -48,7 +48,9 @@ module check_output_control
               print*, err//trim(control%w_list(n))//" to file"
               control%w_list(n) = "do not write"
             end if
-            
+
+
+
           case('tke','tk','turbulent_kinetic_enrgy','k')
             select case (trim(scheme%turbulence))
               case('sst', 'sst2003','kw','bsl','kkl','ke','des-sst')
@@ -85,6 +87,8 @@ module check_output_control
                 control%w_list(n) = "do not write"
              end select
 
+
+
           case('tv')
             select case (trim(scheme%turbulence))
               case('sa', 'saBC')
@@ -93,6 +97,17 @@ module check_output_control
                 print*, err//trim(control%w_list(n))//" to file"
                 control%w_list(n) = "do not write"
              end select
+
+
+          case('phi')
+            if (scheme%scalar_transport/='none') then
+              control%w_list(n) = "Phi"
+            else
+              print*, err//trim(control%w_list(n))//" to file"
+              control%w_list(n) = "do not write"
+            end if
+
+
 
           case('wall_distance', 'dist', 'wall_dist', 'wdist')
             if(scheme%turbulence/="none") then
@@ -113,6 +128,9 @@ module check_output_control
 
           case('tv_residue')
             control%w_list(n) = "Tv_residue"
+
+          case('phi_residue')
+            control%w_list(n) = "Phi_residue"
 
           case('mass_residue')
             control%w_list(n) = "Mass_residue"
@@ -307,6 +325,31 @@ module check_output_control
                 control%w_list(n) = "do not write"
              end select
 
+          case('dphidx')
+            if (scheme%scalar_transport/='none') then
+              control%w_list(n) = "Dphidx"
+            else
+              print*, err//trim(control%w_list(n))//" to file"
+              control%w_list(n) = "do not write"
+            end if
+
+          case('dphidy')
+            if (scheme%scalar_transport/='none') then
+              control%w_list(n) = "Dphidy"
+            else
+              print*, err//trim(control%w_list(n))//" to file"
+              control%w_list(n) = "do not write"
+            end if
+
+
+          case('dphidz')
+            if (scheme%scalar_transport/='none') then
+              control%w_list(n) = "Dphidz"
+            else
+              print*, err//trim(control%w_list(n))//" to file"
+              control%w_list(n) = "do not write"
+            end if
+
           case('intermittency')
             select case (trim(scheme%turbulence))
               case('saBC')
@@ -338,8 +381,8 @@ module check_output_control
     end subroutine verify_write_control
 
     subroutine verify_read_control(control, scheme)
-      !< Verify all the variable being asked to read in the output file. 
-      !< This is a fail-safe subroutine which do not allow to read the incorrect input variable. 
+      !< Verify all the variable being asked to read in the output file.
+      !< This is a fail-safe subroutine which do not allow to read the incorrect input variable.
       !< Based on previous flow type some varible might be skipped
       implicit none
       type(controltype), intent(inout) :: control
@@ -350,13 +393,13 @@ module check_output_control
       do n = 1,control%r_count
 
         select case (trim(lcase(control%r_list(n))))
-        
+
           case('velocity','vel','speed','u','v')
             control%r_list(n) = "Velocity"
 
           case('density','rho')
             control%r_list(n) = "Density"
-          
+
           case('pressure','presssure','p')
             control%r_list(n) = "Pressure"
 
@@ -368,7 +411,7 @@ module check_output_control
            !   print*, err//trim(control%r_list(n))//" from file"
            !   control%r_list(n) = "do not read"
            ! end if
-            
+
           case('mu_t','turbulent_viscosity','mut')
             control%r_list(n) = "do not read"
             !if (scheme%turbulence/='none') then
@@ -377,7 +420,11 @@ module check_output_control
             !  print*, err//trim(control%r_list(n))//" from file"
             !  control%r_list(n) = "do not read"
             !end if
-            
+
+          case('diff')
+            control%r_list(n) = "do not read"
+
+
           case('tke','tk','turbulent_kinetic_enrgy','k')
             select case (trim(scheme%turbulence))
               case('sst','sst2003','kw','bsl','kkl','ke','des-sst')
@@ -450,6 +497,25 @@ module check_output_control
                 control%r_list(n) = "do not read"
             end select
 
+
+            case('phi')
+              select case (trim(scheme%scalar_transport))
+                case('grad_diffusion')
+                  select case (trim(control%previous_flow_type))
+                    case('scalar/viscous', 'scalar/sst','scalar/sst2003', 'scalar/kkl', 'scalar/ke', 'scalar/kw','scalar/bsl','scalar/sa', 'scalar/saBC', 'scalar/des-sst')
+                      control%r_list(n) = "Phi"
+                    case DEFAULT
+                      print*, err//trim(control%w_list(n))//" to file"
+                      control%r_list(n) = "do not write"
+                  end select
+                case DEFAULT
+                  print*, err//trim(control%w_list(n))//" from file"
+                  control%r_list(n) = "do not read"
+              end select
+
+
+
+
           case('wall_distance', 'dist', 'wall_dist', 'wdist')
             control%r_list(n) = "do not read"
             !if(scheme%turbulence/="none") then
@@ -482,7 +548,7 @@ module check_output_control
                     control%r_list(n) = "tgm"
                   case DEFAULT
                     print*, err//trim(control%r_list(n))//" to file"
-                    control%r_list(n) = "do not read"
+                    control%r_list() = "do not read"
                 end select
               case DEFAULT
                 print*, err//trim(control%r_list(n))//" to file"
@@ -577,6 +643,19 @@ module check_output_control
             control%r_list(n) = "do not read"
             !control%r_list(n) = "Dtwdz"
 
+
+          case('dphidx')
+            control%r_list(n) = "do not read"
+
+
+          case('dphidy')
+            control%r_list(n) = "do not read"
+
+
+          case('dphidz')
+            control%r_list(n) = "do not read"
+
+
           case('extravar1','extravar2', 'extravar3', 'extravar4', 'extravar5')
             control%r_list(n) = "do not read"
             !control%r_list(n) = trim(lcase(control%w_list(n)))
@@ -597,13 +676,13 @@ module check_output_control
       character(len=STRING_BUFFER_LENGTH) :: res
       !< Output string of lower case
       integer ::  I,C
-  
+
       res=text
       DO I = 1,LEN(TEXT)
         C = INDEX("ABCDEFGHIJKLMNOPQRSTUVWXYZ",TEXT(I:I))
         IF (C.GT.0) res(I:I) = "abcdefghijklmnopqrstuvwxyz"(C:C)
       END DO
-  
+
     end function lcase
 
 end module check_output_control

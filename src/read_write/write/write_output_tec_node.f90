@@ -9,8 +9,9 @@ module write_output_tec_node
 #include "../../debug.h"
 #include "../../error.h"
   use vartypes
-  use viscosity, only : mu 
-  use viscosity, only : mu_t 
+  use viscosity, only : mu
+  use viscosity, only : mu_t
+  use diffusivity, only : diff
   use wall_dist, only : dist
   use global_sst , only : sst_F1
   use gradients, only : gradu_x
@@ -31,6 +32,9 @@ module write_output_tec_node
   use gradients, only : gradtw_x
   use gradients, only : gradtw_y
   use gradients, only : gradtw_z
+  use gradients, only : gradphi_x
+  use gradients, only : gradphi_y
+  use gradients, only : gradphi_z
 
   use utils
 
@@ -40,28 +44,29 @@ module write_output_tec_node
   integer :: i,j,k
   character(len=*), parameter :: format="(35e25.15)"
   integer :: imx, jmx, kmx
-  real(wp), dimension(:, :, :), pointer :: density      
+  real(wp), dimension(:, :, :), pointer :: density
    !< Rho pointer, point to slice of qp (:,:,:,1)
-  real(wp), dimension(:, :, :), pointer :: x_speed      
-   !< U pointer, point to slice of qp (:,:,:,2) 
-  real(wp), dimension(:, :, :), pointer :: y_speed      
-   !< V pointer, point to slice of qp (:,:,:,3) 
-  real(wp), dimension(:, :, :), pointer :: z_speed      
+  real(wp), dimension(:, :, :), pointer :: x_speed
+   !< U pointer, point to slice of qp (:,:,:,2)
+  real(wp), dimension(:, :, :), pointer :: y_speed
+   !< V pointer, point to slice of qp (:,:,:,3)
+  real(wp), dimension(:, :, :), pointer :: z_speed
    !< W pointer, point to slice of qp (:,:,:,4)
-  real(wp), dimension(:, :, :), pointer :: pressure     
+  real(wp), dimension(:, :, :), pointer :: pressure
    !< P pointer, point to slice of qp (:,:,:,5)
-  real(wp), dimension(:, :, :), pointer :: tk        
+  real(wp), dimension(:, :, :), pointer :: tk
   !< TKE, point to slice of qp (:,:,:,6)
-  real(wp), dimension(:, :, :), pointer :: tw        
+  real(wp), dimension(:, :, :), pointer :: tw
   !< Omega, point to slice of qp (:,:,:,7)
-  real(wp), dimension(:, :, :), pointer :: te        
+  real(wp), dimension(:, :, :), pointer :: te
   !< Dissipation, point to slice of qp (:,:,:,7)
-  real(wp), dimension(:, :, :), pointer :: tv        
+  real(wp), dimension(:, :, :), pointer :: tv
   !< SA visocity, point to slice of qp (:,:,:,6)
-  real(wp), dimension(:, :, :), pointer :: tkl       
+  real(wp), dimension(:, :, :), pointer :: tkl
   !< KL K-KL method, point to slice of qp (:,:,:,7)
-  real(wp), dimension(:, :, :), pointer :: tgm       
+  real(wp), dimension(:, :, :), pointer :: tgm
   !< Intermittency of LCTM2015, point to slice of qp (:,:,:,8)
+  real(wp), dimension(:, :, :), pointer :: phi
   public :: write_file
 
   contains
@@ -73,13 +78,13 @@ module write_output_tec_node
       type(controltype), intent(in) :: control
       type(schemetype), intent(in) :: scheme
       type(extent), intent(in) :: dims
-      type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(in) :: nodes 
+      type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(in) :: nodes
       real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in), target :: state
       integer :: n
       character(len=*), parameter :: err="Write error: Asked to write non-existing variable- "
 
       DebugCall("write_file")
-      
+
       OUT_FILE_UNIT = file_handler
 
       imx = dims%imx
@@ -96,7 +101,7 @@ module write_output_tec_node
           case ("none")
               !include nothing
               continue
-          
+
           case ("sst", "sst2003", "bsl", "des-sst", "kw")
               tk(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 6)
               tw(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 7)
@@ -129,13 +134,26 @@ module write_output_tec_node
           Fatal_error
       end Select
 
+      ! Transition modeling
+      select case(trim(scheme%scalar_transport))
+        case('grad_diffusion')
+          phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, control%n_var)
+
+        case('none')
+          !do nothing
+          continue
+
+        case DEFAULT
+          Fatal_error
+      end Select
+
       call write_header(control)
       call write_grid(nodes)
 
       do n = 1,control%w_count
 
         select case (trim(control%w_list(n)))
-        
+
           case('Velocity')
             call write_scalar(x_speed, "u", -2)
             call write_scalar(y_speed, "v", -2)
@@ -143,16 +161,19 @@ module write_output_tec_node
 
           case('Density')
             call write_scalar(density, "Density", -2)
-          
+
           case('Pressure')
             call write_scalar(pressure, "Pressure", -2)
-            
+
           case('Mu')
             call write_scalar(mu, "Mu", -2)
-            
+
           case('Mu_t')
             call write_scalar(mu_t, "Mu_t", -2)
-            
+
+          case('diff')
+            call write_scalar(diff, "diff", -2)
+
           case('TKE')
             call write_scalar(tk, "TKE",  -2)
 
@@ -165,6 +186,10 @@ module write_output_tec_node
           case('tv')
             call write_scalar(tv, "tv", -2)
 
+          case('phi')
+            call write_scalar(phi, "phi", -2)
+
+
          ! case('Wall_distance')
          !   call write_scalar(dist, "Wall_dist", 1)
 
@@ -173,57 +198,67 @@ module write_output_tec_node
 
           case('Dudx')
             call write_scalar(gradu_x ,"dudx ", 0)
-                                               
-          case('Dudy')                         
+
+          case('Dudy')
             call write_scalar(gradu_y ,"dudy ", 0)
-                                               
-          case('Dudz')                         
+
+          case('Dudz')
             call write_scalar(gradu_z ,"dudz ", 0)
-                                               
-          case('Dvdx')                         
+
+          case('Dvdx')
             call write_scalar(gradv_x ,"dvdx ", 0)
-                                               
-          case('Dvdy')                         
+
+          case('Dvdy')
             call write_scalar(gradv_y ,"dvdy ", 0)
-                                               
-          case('Dvdz')                         
+
+          case('Dvdz')
             call write_scalar(gradv_z ,"dvdz ", 0)
-                                               
-          case('Dwdx')                         
+
+          case('Dwdx')
             call write_scalar(gradw_x ,"dwdx ", 0)
-                                               
-          case('Dwdy')                         
+
+          case('Dwdy')
             call write_scalar(gradw_y ,"dwdy ", 0)
-                                               
-          case('Dwdz')                         
+
+          case('Dwdz')
             call write_scalar(gradw_z ,"dwdz ", 0)
-                                               
-          case('DTdx')                         
+
+          case('DTdx')
             call write_scalar(gradT_x ,"dTdx ", 0)
-                                               
-          case('DTdy')                         
+
+          case('DTdy')
             call write_scalar(gradT_y ,"dTdy ", 0)
-                                               
-          case('DTdz')                         
+
+          case('DTdz')
             call write_scalar(gradT_z ,"dTdz ", 0)
-                                               
-          case('Dtkdx')                        
+
+          case('Dtkdx')
             call write_scalar(gradtk_x,"dtkdx", 0)
-                                               
-          case('Dtkdy')                        
+
+          case('Dtkdy')
             call write_scalar(gradtk_y,"dtkdy", 0)
-                                               
-          case('Dtkdz')                        
+
+          case('Dtkdz')
             call write_scalar(gradtk_z,"dtkdz", 0)
-                                               
-          case('Dtwdx')                        
+
+          case('Dtwdx')
             call write_scalar(gradtw_x,"dtwdx", 0)
-                                               
-          case('Dtwdy')                        
+
+          case('Dtwdy')
             call write_scalar(gradtw_y,"dtwdy", 0)
-                                               
-          case('Dtwdz')                        
+
+          case('Dtwdz')
             call write_scalar(gradtw_z,"dtwdz", 0)
+
+
+          case('Dphidx')
+            call write_scalar(gradphi_x,"dtphix", 0)
+
+          case('Dphidy')
+            call write_scalar(gradphi_y,"dphidy", 0)
+
+          case('Dphidz')
+            call write_scalar(gradphi_z,"dphidz", 0)
 
           case('do not write')
             ! do not write
@@ -253,13 +288,13 @@ module write_output_tec_node
       do n = 1,control%w_count
 
         select case (trim(control%w_list(n)))
-        
+
           case('Velocity')
             write(OUT_FILE_UNIT, '(a)') " u v w "
             total = total+3
 
           case('do not write')
-            !skip 
+            !skip
             continue
 
           case Default
@@ -282,7 +317,7 @@ module write_output_tec_node
     subroutine write_grid(nodes)
       !< Write grid information in the output file
       implicit none
-      type(nodetype), dimension(-2:imx+3,-2:jmx+3,-2:kmx+3), intent(in) :: nodes 
+      type(nodetype), dimension(-2:imx+3,-2:jmx+3,-2:kmx+3), intent(in) :: nodes
 
       ! write grid point coordinates
       DebugCall('write_output_tec_node: write_grid')

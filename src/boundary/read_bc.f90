@@ -1,6 +1,6 @@
-  !< Get all the fixed values from the bc_**.md file 
+  !< Get all the fixed values from the bc_**.md file
 module read_bc
-  !< Get all the fixed values from the bc_**.md file 
+  !< Get all the fixed values from the bc_**.md file
   !-----------------------------------------------------
 #include "../error.h"
   use vartypes
@@ -52,7 +52,7 @@ module read_bc
       integer :: ios
       do while(.true.)
         read(files%BOUNDARY_CONDITIONS_FILE_UNIT,"(A)") buf
-        if(buf(1:2) == '- ') then 
+        if(buf(1:2) == '- ') then
           read(buf(index(buf(3:), ' ')+3:), *, iostat=ios) fix_val
           select case(buf(3:index(buf(3:), " ")+1))
             case ("FIX_DENSITY")
@@ -97,7 +97,7 @@ module read_bc
                   ! no a value to fix
                   continue
               end select
-              
+
             case ("kkl")
               select case(buf(3:index(buf(3:), " ")+1))
                 case ("FIX_tk")
@@ -120,6 +120,22 @@ module read_bc
 
           end select
 
+          select case(scheme%scalar_transport)
+
+          case('none')
+            continue
+
+            case('grad_diffusion')
+                select case(buf(3:index(buf(3:), " ")+1))
+                case("FIX_phi")
+                    call set_value(bc%fixed_phi, fix_val, flow%phi_inf, count, ios)
+                case DEFAULT
+                    continue
+                end select
+          end select
+
+
+
         else
           exit
         end if
@@ -127,7 +143,7 @@ module read_bc
 
     end subroutine get_fixed_values
 
-    
+
     subroutine fill_fixed_values(scheme, flow, bc)
       !< Fill the Fixed_var array with with free-stream value
       !< or default values.
@@ -175,7 +191,7 @@ module read_bc
               call set_value(bc%fixed_tk      , flow%tk_inf, flow%tk_inf      , count, ios)
             !case ("FIX_tw")
               call set_value(bc%fixed_tw      , flow%tw_inf, flow%tw_inf      , count, ios)
-            
+
           case ("kkl")
             !case ("FIX_tk")
               call set_value(bc%fixed_tk      , flow%tk_inf, flow%tk_inf      , count, ios)
@@ -190,6 +206,18 @@ module read_bc
             Fatal_error
 
         end select
+
+
+        select case(scheme%scalar_transport)
+        case('none')
+            continue
+            case('grad_diffusion')
+                call set_value(bc%fixed_phi  , flow%phi_inf, flow%phi_inf     , count, ios)
+
+                case DEFAULT
+                    Fatal_error
+        end select
+
       end do
 
     end subroutine fill_fixed_values
@@ -206,7 +234,7 @@ module read_bc
       real(wp)   , intent(out), dimension(:) :: fixed_var
       if(ios==0)then
         fixed_var(count) = fix_val
-      else 
+      else
         fixed_var(count) = inf_val
       end if
     end subroutine set_value

@@ -28,16 +28,17 @@ module bc_primitive
   real(wp) :: tv_inf
   real(wp) :: tgm_inf
   real(wp) :: tkl_inf
+  real(wp) :: phi_inf
   real(wp), dimension(:, :, :, :), pointer :: qp
-  real(wp), dimension(:, :, :), pointer :: density      
+  real(wp), dimension(:, :, :), pointer :: density
    !< Rho pointer, point to slice of qp (:,:,:,1)
-  real(wp), dimension(:, :, :), pointer :: x_speed      
-   !< U pointer, point to slice of qp (:,:,:,2) 
-  real(wp), dimension(:, :, :), pointer :: y_speed      
-   !< V pointer, point to slice of qp (:,:,:,3) 
-  real(wp), dimension(:, :, :), pointer :: z_speed      
+  real(wp), dimension(:, :, :), pointer :: x_speed
+   !< U pointer, point to slice of qp (:,:,:,2)
+  real(wp), dimension(:, :, :), pointer :: y_speed
+   !< V pointer, point to slice of qp (:,:,:,3)
+  real(wp), dimension(:, :, :), pointer :: z_speed
    !< W pointer, point to slice of qp (:,:,:,4)
-  real(wp), dimension(:, :, :), pointer :: pressure     
+  real(wp), dimension(:, :, :), pointer :: pressure
    !< P pointer, point to slice of qp (:,:,:,5)
   ! state variable turbulent
   real(wp), dimension(:, :, :), pointer :: tk        !< TKE/mass
@@ -45,6 +46,7 @@ module bc_primitive
   real(wp), dimension(:, :, :), pointer :: te        !< Dissipation
   real(wp), dimension(:, :, :), pointer :: tv        !< SA visocity
   real(wp), dimension(:, :, :), pointer :: tkl       !< KL K-KL method
+  real(wp), dimension(:, :, :), pointer :: phi       !< Passive scalar
   real(wp), dimension(:, :, :), pointer :: tgm       !< Intermittency of LCTM2015
 
   public :: populate_ghost_primitive
@@ -54,7 +56,7 @@ module bc_primitive
 
     subroutine populate_ghost_primitive(state, Ifaces, Jfaces, Kfaces, control, scheme, flow, bc, dims)
       !< Populate the state variables in the ghost cell
-      !< with particular value based on the boundary conditio 
+      !< with particular value based on the boundary condition
       !< being applied at that face
       implicit none
       type(extent), intent(in) :: dims
@@ -80,23 +82,26 @@ module bc_primitive
       current_iter = control%current_iter
       turbulence = trim(scheme%turbulence)
       transition = trim(scheme%transition)
+      scalar_transport = trim(scheme%scalar_transport)
       mu_ref = flow%mu_ref
+      diff_ref = flow%diff_ref
       gm = flow%gm
       R_gas = flow%R_gas
       T_ref = flow%T_ref
       sutherland_temp = flow%sutherland_temp
-      x_speed_inf  =  flow%x_speed_inf 
-      y_speed_inf  =  flow%y_speed_inf 
-      z_speed_inf  =  flow%z_speed_inf 
-      density_inf  =  flow%density_inf 
+      x_speed_inf  =  flow%x_speed_inf
+      y_speed_inf  =  flow%y_speed_inf
+      z_speed_inf  =  flow%z_speed_inf
+      density_inf  =  flow%density_inf
       pressure_inf =  flow%pressure_inf
-      tk_inf       =  flow%tk_inf      
-      tw_inf       =  flow%tw_inf      
-      te_inf       =  flow%te_inf      
-      tv_inf       =  flow%tv_inf      
-      tgm_inf      =  flow%tgm_inf     
-      tkl_inf      =  flow%tkl_inf     
-     
+      tk_inf       =  flow%tk_inf
+      tw_inf       =  flow%tw_inf
+      te_inf       =  flow%te_inf
+      tv_inf       =  flow%tv_inf
+      tgm_inf      =  flow%tgm_inf
+      tkl_inf      =  flow%tkl_inf
+      phi_inf      =  flow%phi_inf
+
       qp(-2:imx+2, -2:jmx+2, -2:kmx+2, 1:n_var) => state(:, :, :, :)
       density(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 1)
       x_speed(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 2)
@@ -110,7 +115,7 @@ module bc_primitive
           case ("none")
               !include nothing
               continue
-          
+
           case ("sst", "sst2003", "bsl", "des-sst", "kw")
               tk(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 6)
               tw(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 7)
@@ -140,7 +145,7 @@ module bc_primitive
       select case(trim(scheme%transition))
 
         case('lctm2015')
-          tgm(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, n_var)
+          tgm(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 8)
 !          tgm_inf => qp_inf(n_var)
 
         case('bc', 'none')
@@ -150,9 +155,26 @@ module bc_primitive
         case DEFAULT
           Fatal_error
 
+          end select
+
+          select case(trim(scheme%scalar_transport))
+
+        case('grad_diffusion')
+          phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, n_var)
+!          phi_inf => qp_inf(n_var)
+
+        case('none')
+          !do nothing
+          continue
+
+        case DEFAULT
+          Fatal_error
+
+
+
       end Select
-     
-      
+
+
       do i = 1,6
         face_num = i
         face = bc%face_names(face_num)
@@ -191,7 +213,7 @@ module bc_primitive
 
           case Default
             if(bc%id(i)>=0 .or. bc%id(i)==-10) then
-              continue !interface boundary 
+              continue !interface boundary
             else
               print*, " boundary condition not recognised -> id is :", bc%id(i)
             end if
@@ -262,14 +284,29 @@ module bc_primitive
             call fix(tgm, bc%fixed_tgm, face)
           case DEFAULT
             continue
+
         end select
+
+        select case(trim(scalar_transport))
+          case('grad_diffusion')
+            !call check_if_value_fixed(bc, "basic")
+            call fix(phi, bc%fixed_phi, face)
+
+            case('none')
+                continue
+          case DEFAULT
+            Fatal_error
+
+            end select
+
+
         end if
       end subroutine supersonic_inlet
 
 
       subroutine supersonic_outlet(face, bc, dims)
-        !< Supersonic outlet boundary condition. 
-        !< All the values of state variables are copied 
+        !< Supersonic outlet boundary condition.
+        !< All the values of state variables are copied
         !< from inside the domain
         implicit none
         type(extent), intent(in) :: dims
@@ -302,13 +339,24 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+
+         select case(trim(scalar_transport))
+          case('grad_diffusion')
+            call copy3(phi, "flat", face, bc, dims)
+
+          case('none')
+            continue
+          case DEFAULT
+            continue
+        end select
+
       end subroutine supersonic_outlet
 
 
       subroutine subsonic_inlet(face, bc, dims)
-        !< Subsonic inlet boundary condition. 
+        !< Subsonic inlet boundary condition.
         !< All the state variables's value expect pressure
-        !< is fixed and pressure is copied from inside the 
+        !< is fixed and pressure is copied from inside the
         !< domain
         implicit none
         type(extent), intent(in) :: dims
@@ -344,15 +392,27 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+
+        select case(trim(scalar_transport))
+          case('grad_diffusion')
+            !call check_if_value_fixed(bc, "basic")
+            call fix(phi, bc%fixed_phi, face)
+
+          case('none')
+            continue
+          case DEFAULT
+            continue
+        end select
+
         end if
         call copy3(pressure, "flat", face, bc, dims)
       end subroutine subsonic_inlet
 
 
       subroutine subsonic_outlet(face, bc, dims)
-        !< Subsonic outlet boundary condition. 
+        !< Subsonic outlet boundary condition.
         !< All the state variables's value expect pressure
-        !< is copied from the inside of the domain and pressure 
+        !< is copied from the inside of the domain and pressure
         !< is fixed
         implicit none
         type(extent), intent(in) :: dims
@@ -387,6 +447,16 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+
+        select case(trim(scalar_transport))
+          case('grad_diffusion')
+            call copy3(phi, "flat", face, bc, dims)
+          case('none')
+            continue
+          case DEFAULT
+            continue
+        end select
+
       end subroutine subsonic_outlet
 
       subroutine wall(face, bc, dims)
@@ -403,7 +473,7 @@ module bc_primitive
 
 
       subroutine slip_wall(face, Ifaces, Jfaces, Kfaces, bc, dims)
-        !< Slip wall boundary condition. 
+        !< Slip wall boundary condition.
         !< Maintain flow tangency
         implicit none
         type(extent), intent(in) :: dims
@@ -439,6 +509,17 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+
+        select case(trim(scalar_transport))
+          case('grad_diffusion')
+            call copy3(phi, "symm", face, bc, dims)
+
+          case('none')
+            continue
+          case DEFAULT
+            Fatal_error
+        end select
+
         call flow_tangency(qp, face, Ifaces, Jfaces, Kfaces, dims)
       end subroutine slip_wall
 
@@ -461,7 +542,7 @@ module bc_primitive
             !do nothing
             continue
           case('sa', 'saBC')
-            call copy3(tv, "flat", face, bc, dims) 
+            call copy3(tv, "flat", face, bc, dims)
           case('sst', 'sst2003')
             call copy3(tk, "flat", face, bc, dims)
             call copy3(tw, "flat", face, bc, dims)
@@ -477,6 +558,16 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+
+        select case(trim(scalar_transport))
+          case('grad_diffusion')
+            call copy3(phi, "flat", face, bc, dims)
+          case('none')
+            continue
+          case DEFAULT
+            Fatal_error
+        end select
+
       end subroutine pole
 
 
@@ -521,12 +612,12 @@ module bc_primitive
             !print*, "ERROR: wrong face for boundary condition"
             Fatal_error
         end select
-            
+
       end subroutine fix
 
 
       subroutine no_slip(face, bc, dims)
-        !< No-slip wall boundary condition. All the 
+        !< No-slip wall boundary condition. All the
         !< component of velocity throught face is zero
         implicit none
         type(extent), intent(in) :: dims
@@ -557,12 +648,23 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+
+        select case(trim(scalar_transport))
+          case('grad_diffusion')
+            call copy3(phi, "flat", face, bc, dims)
+
+          case('none')
+            continue
+          case DEFAULT
+            continue
+        end select
+
       end subroutine no_slip
 
-    
+
 
       subroutine set_omega_at_wall(face)
-        !< Set value of turbulence variable: omega (turbulenct dissipation rate). 
+        !< Set value of turbulence variable: omega (turbulenct dissipation rate).
         !< Value fixed is accourding to the SST turbulence model
         implicit none
         character(len=*), intent(in) :: face
@@ -570,7 +672,7 @@ module bc_primitive
         real(wp) :: mu
         real(wp) :: rho
         integer :: i,j,k,l
-        
+
         select case(face)
           case("imin")
             do l=1,3
@@ -718,6 +820,17 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                   face_already_has_fixed_values(1)=0
                 else
                   vel_diff = Unb - Uninf
@@ -753,6 +866,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      !call check_if_value_fixed(bc, "basic")
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
+
                   end if
                   face_already_has_fixed_values(1)=1
                 end if
@@ -811,6 +937,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      !call check_if_value_fixed(bc, "basic")
+                      call copy3(phi,"flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                   face_already_has_fixed_values(2)=0
                 else
                   vel_diff = Unb - Uninf
@@ -846,6 +984,20 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      !call check_if_value_fixed(bc, "basic")
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
+
+
                   end if
                   face_already_has_fixed_values(2)=1
                 end if
@@ -904,6 +1056,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
+
+
                   face_already_has_fixed_values(3)=0
                 else
                   vel_diff = Unb - Uninf
@@ -939,6 +1104,22 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transition))
+                  case('grad_diffusion')
+
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+
+                      continue
+
+                      case DEFAULT
+                        Fatal_error
+
+                  end select
+
+
+
                   end if
                   face_already_has_fixed_values(3)=1
                 end if
@@ -997,6 +1178,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
+
                   face_already_has_fixed_values(4)=0
                 else
                   vel_diff = Unb - Uninf
@@ -1032,6 +1225,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      !call check_if_value_fixed(bc, "lctm2015")
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                   end if
                   face_already_has_fixed_values(4)=1
                 end if
@@ -1090,6 +1295,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
+
                   face_already_has_fixed_values(5)=0
                 else
                   vel_diff = Unb - Uninf
@@ -1125,6 +1342,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                     continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                   end if
                   face_already_has_fixed_values(5)=1
                 end if
@@ -1183,6 +1412,20 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                      case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
+
+
+
                   face_already_has_fixed_values(6)=0
                 else
                   vel_diff = Unb - Uninf
@@ -1218,6 +1461,20 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                  case('grad_diffusion')
+                      !call check_if_value_fixed(bc, "lctm2015")
+                      call fix(phi, bc%fixed_phi, face)
+                  case('none')
+                      continue
+                  case DEFAULT
+                      continue
+                  end select
+
+
+
+
                   end if
                   face_already_has_fixed_values(6)=1
                 end if
@@ -1305,6 +1562,17 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transition))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i-1,j,k) = x_speed_inf + vel_diff*(-Ifaces(i,j,k)%nx)
@@ -1334,6 +1602,20 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+
+                    !call check_if_value_fixed(bc, "scalar")
+                      call fix(phi, bc%fixed_phi, face)
+
+                  case('none')
+                    continue
+                   case DEFAULT
+                    continue
+                  end select
+
+
                 end if
                 Mb = sqrt(x_speed(i-1,j,k)**2+y_speed(i-1,j,k)**2+z_speed(i-1,j,k)**2)/Cb
                 pressure(i-1,j,k) = bc%fixed_Tpressure(1)/(((1+0.5*(gm-1.)*Mb*Mb))**(gm/(gm-1.)))
@@ -1390,6 +1672,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k) = x_speed_inf + vel_diff*(Ifaces(i,j,k)%nx)
@@ -1419,6 +1713,20 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_tranport))
+                    case('grad_diffusion')
+
+                      call fix(phi, bc%phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
+
+
                 end if
                 Mb = sqrt(x_speed(i,j,k)**2+y_speed(i,j,k)**2+z_speed(i,j,k)**2)/Cb
                 pressure(i,j,k) = bc%fixed_Tpressure(2)/(((1+0.5*(gm-1.)*Mb*Mb))**(gm/(gm-1.)))
@@ -1475,6 +1783,17 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j-1,k) = x_speed_inf + vel_diff*(-Jfaces(i,j,k)%nx)
@@ -1504,6 +1823,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 end if
                 Mb = sqrt(x_speed(i,j-1,k)**2+y_speed(i,j-1,k)**2+z_speed(i,j-1,k)**2)/Cb
                 pressure(i,j-1,k) = bc%fixed_Tpressure(3)/(((1+0.5*(gm-1.)*Mb*Mb))**(gm/(gm-1.)))
@@ -1560,6 +1891,17 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k) = x_speed_inf + vel_diff*(Jfaces(i,j,k)%nx)
@@ -1589,6 +1931,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 end if
                 Mb = sqrt(x_speed(i,j,k)**2+y_speed(i,j,k)**2+z_speed(i,j,k)**2)/Cb
                 pressure(i,j,k) = bc%fixed_Tpressure(4)/(((1+0.5*(gm-1.)*Mb*Mb))**(gm/(gm-1.)))
@@ -1645,6 +1999,17 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k-1) = x_speed_inf + vel_diff*(-Kfaces(i,j,k)%nx)
@@ -1674,6 +2039,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      !call check_if_value_fixed(bc, "basic")
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 end if
                 Mb = sqrt(x_speed(i,j,k)**2+y_speed(i,j,k)**2+z_speed(i,j,k)**2)/Cb
                 pressure(i,j,k-1) = bc%fixed_Tpressure(5)/(((1+0.5*(gm-1.)*Mb*Mb))**(gm/(gm-1.)))
@@ -1730,6 +2107,14 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+                      call copy3(phi, "flat", face, bc, dims)
+                    case DEFAULT
+                      continue
+                  end select
+
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k) = x_speed_inf + vel_diff*(Kfaces(i,j,k)%nx)
@@ -1759,6 +2144,18 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+
+                  select case(trim(scalar_transport))
+                    case('grad_diffusion')
+
+                      call fix(phi, bc%fixed_phi, face)
+                    case('none')
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
+
+
                 end if
                 Mb = sqrt(x_speed(i,j,k)**2+y_speed(i,j,k)**2+z_speed(i,j,k)**2)/Cb
                 pressure(i,j,k) = bc%fixed_Tpressure(6)/(((1+0.5*(gm-1.)*Mb*Mb))**(gm/(gm-1.)))

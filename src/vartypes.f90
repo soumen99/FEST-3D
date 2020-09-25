@@ -32,7 +32,7 @@ module vartypes
       real(wp) :: centerx
       real(wp) :: centery
       real(wp) :: centerz
-      !< Store Cell-center location 
+      !< Store Cell-center location
     end type celltype
 
 
@@ -42,10 +42,10 @@ module vartypes
       real(wp) :: nx
       real(wp) :: ny
       real(wp) :: nz
-       !< Store unit face normal vector for all faces 
+       !< Store unit face normal vector for all faces
     end type facetype
 
-    
+
     type, public :: filetype
 !        integer :: FILE_NAME_LENGTH = 64
 !        !< Length of string used for defining any filename
@@ -101,7 +101,7 @@ module vartypes
         character(len=FILE_NAME_LENGTH) :: layout_file='system/mesh/layout/layout.md'
         !< FILENAME string: Multiple layout/boundary condition file
         character(len=FILE_NAME_LENGTH) :: nodefile_temp="scratch.dat"
-        !< FILENAME string: Temperory file for nodesurface points 
+        !< FILENAME string: Temperory file for nodesurface points
         character(len=FILE_NAME_LENGTH) :: surface_node_points='time_directories/aux/surfnode.dat'
         !< FILENAME string: Wall surface node points
         character(len=FILE_NAME_LENGTH) :: res_control_file='system/res_control.md'
@@ -130,31 +130,31 @@ module vartypes
     type, public :: controltype
         real(wp) :: CFL=1.0
         !< Courant–Friedrichs–Lewy (CFL) (Read from input)
-        integer :: start_from=0 
+        integer :: start_from=0
         !< Number of the folder (in time_directories) to load stored state from to restart computation
-        integer :: min_iter=1     
+        integer :: min_iter=1
         !< Minimum iteration value, starting iteration value
-        integer :: max_iters=1 
+        integer :: max_iters=1
         !< Maximum iteration value, stop after these many iteration
-        integer :: checkpoint_iter=0  
+        integer :: checkpoint_iter=0
         !< Write interval for output file. Number of iteration after which solver will dump/store a state in a folder in time_directories
-        integer :: checkpoint_iter_count=0 
+        integer :: checkpoint_iter_count=0
         !< Counter of folder number to write in time_directories/
-        integer :: current_iter=0  
+        integer :: current_iter=0
         !< Current iteration number
         integer :: res_write_interval=10
         !< Write resnorm after every "res_write_interval" iteration
         integer :: purge_write=1
         !< Remove unwanted folder. If Purge_write=2, latest two folder in time_direcotires are kept and 0=no purge
-        integer :: last_iter=0    
+        integer :: last_iter=0
         !< Last iteration that is stored in the restart file
-        integer :: write_percision=6 
+        integer :: write_percision=6
         !< Number of place after decimal. Only used for resnorm file
         character(len=FORMAT_LENGTH):: write_data_format='ASCII'
         !< write data type. Either ASCII or BINARY
         character(len=FORMAT_LENGTH):: write_file_format='tecplot'
         !< Write file type. Either vtk or tecplot
-        character(len=FORMAT_LENGTH)::  read_data_format='ASCII' 
+        character(len=FORMAT_LENGTH)::  read_data_format='ASCII'
         !< Read data type in file. Either ASCII or BINARY
         character(len=FORMAT_LENGTH)::  read_file_format='tecplot'
         !< Read file type. Either vtk or tecplot
@@ -164,29 +164,29 @@ module vartypes
         !< Type of tolerance to check:absolute or relative
         integer, public :: DEBUG_LEVEL = 1
         !< Debug level is an input from the control file.
-        !< 5-> important calls only, and, 
+        !< 5-> important calls only, and,
         !< 1-> all the calls
-        character(len=STRING_BUFFER_LENGTH):: previous_flow_type="none" 
-        !< Type of flow:inviscid, laminar, etc, stored in the load file 
+        character(len=STRING_BUFFER_LENGTH):: previous_flow_type="none"
+        !< Type of flow:inviscid, laminar, etc, stored in the load file
         integer                                           :: n_var=5
         ! Freestram variable used to read file before inf pointer are linked and allocated
-        character(len=STRING_BUFFER_LENGTH), dimension(:), allocatable ::  r_list 
+        character(len=STRING_BUFFER_LENGTH), dimension(:), allocatable ::  r_list
         !< Read variable list
-        character(len=STRING_BUFFER_LENGTH), dimension(:), allocatable ::  w_list 
+        character(len=STRING_BUFFER_LENGTH), dimension(:), allocatable ::  w_list
         !< Write variable list
-        integer :: r_count=0                               
+        integer :: r_count=0
         !< Number of variable to read from the restart file
-        integer :: w_count=0                               
+        integer :: w_count=0
         !< Number of variable to write in the output file
         character(len=STRING_BUFFER_LENGTH), dimension(:), allocatable :: Res_list
         !< Write residual variable list
-        integer            :: Res_count       
+        integer            :: Res_count
         !< No of residual variable to save
         integer :: total_process=1
         !< Total number of process to be used for computation
         integer :: process_id=0
         !< Id no. of each processor assinged by MPICH library
-        integer :: want_to_stop=0  
+        integer :: want_to_stop=0
         !< 0: continue the solver; 1=Stop the solver
         logical :: Halt = .FALSE.
         !< Logical value used to stop the solver in main program file.
@@ -227,7 +227,9 @@ module vartypes
        !< Store Turbulence model name
       character(len=8)                                  :: transition='none'
        !< Store Transition model name
-      integer  :: accur=1                          
+      character(len=17)                                  :: scalar_transport='none'
+       !< Store scalar transport name
+      integer  :: accur=1
       !< Switch for higher order boundary condition
    end type schemetype
 
@@ -266,10 +268,10 @@ module vartypes
       real(wp)                                              :: mu_ratio_inf=1.0
        !< Read freestream turbulent viscosity to molecular viscosity ratio
       real(wp)                                              :: Turb_intensity_inf=0.01
-       !< Calculate free_stream turbulence intensity 
-      real(wp)                                              :: gm=1.4    
+       !< Calculate free_stream turbulence intensity
+      real(wp)                                              :: gm=1.4
       !< Gamma commonly 1.4
-      real(wp)                                              :: R_gas=287 
+      real(wp)                                              :: R_gas=287
       !< Univarsal gas constant
       real(wp)                                              :: mu_ref=0.0
       !< Molecular viscoity reference
@@ -279,35 +281,41 @@ module vartypes
       !< Reference Temperature of flow for viscosity calculation
       real(wp)                                              :: Sutherland_temp=110
       !< Sutherland temperature for viscosity calculation
-      real(wp)                                              :: Pr=0.7 
+      real(wp)                                              :: Pr=0.7
       !< prandtl number
-      real(wp)                                              :: tPr=0.9 
+      real(wp)                                              :: tPr=0.9
       !< turbulent Prandtl number
+      real(wp)                                              :: phi_inf=0
+      !<read freestream passive scalar from control file
+      real(wp)                                              :: diff_ref=0
+      !< scalar diffusivity
+      character(len=FILE_NAME_LENGTH)                       :: diff_variation="constant"
+      !<variation of diffusivity
     end type flowtype
 
 
     type :: boundarytype
-      integer :: imin_id            
+      integer :: imin_id
       !< Boundary condition number/ID at imin for particulat processor
-      integer :: imax_id            
+      integer :: imax_id
       !< Boundary condition number/ID at imax for particulat processor
-      integer :: jmin_id            
+      integer :: jmin_id
       !< Boundary condition number/ID at jmin for particulat processor
-      integer :: jmax_id            
+      integer :: jmax_id
       !< Boundary condition number/ID at jmax for particulat processor
-      integer :: kmin_id           
+      integer :: kmin_id
       !< Boundary condition number/ID at kmin for particulat processor
-      integer :: kmax_id  
+      integer :: kmax_id
       !< Boundary condition number/ID at kmax for particulat processor
-      character(len=4), dimension(6) :: face_names 
+      character(len=4), dimension(6) :: face_names
       !< Store name of all six boundary faces
-      integer,          dimension(6) :: id         
+      integer,          dimension(6) :: id
       !< Store the boundary condition ID of all six faces
-      real(wp)                           :: c1         
+      real(wp)                           :: c1
       !< First coefficient user for higher order boundary condition
-      real(wp)                           :: c2         
+      real(wp)                           :: c2
       !< Second coefficient user for higher order boundary condition
-      real(wp)                           :: c3         
+      real(wp)                           :: c3
       !< Third coefficient user for higher order boundary condition
 
       ! store fix values for 6 faces of domain
@@ -339,10 +347,12 @@ module vartypes
       !<  Fixed Total Pressure value to apply at particular boundary condition
       real(wp), dimension(6) :: fixed_Ttemperature      = 0.
       !<  Fixed Total Temperature value to apply at particular boundary condition
+      real(wp), dimension(6) :: fixed_phi      = 0.
+      !<  Fixed passive scalar value at particular boundary condition
 
 
       !interface mapping
-      integer, dimension(6) :: ilo, ihi 
+      integer, dimension(6) :: ilo, ihi
        !< Store the lower and upper bound of the indecies of I loop for the interface mapping
       integer, dimension(6) :: jlo, jhi
        !< Store the lower and upper bound of the indecies of J loop for the interface mapping
@@ -358,7 +368,7 @@ module vartypes
        !< Store zero to boundary face, which has wall ID, to make F flux zero
       integer,dimension(:),allocatable::make_G_flux_zero
        !< Store zero to boundary face, which has wall ID, to make G flux zero
-      integer,dimension(:),allocatable::make_H_flux_zero  
+      integer,dimension(:),allocatable::make_H_flux_zero
        !< Store zero to boundary face, which has wall ID, to make H flux zero
 
       !periodic boundary condition

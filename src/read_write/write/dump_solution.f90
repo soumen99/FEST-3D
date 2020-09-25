@@ -64,7 +64,7 @@ module dump_solution
     end subroutine create_directory
 
     subroutine remove_directory(dirname)
-      !< Remove a directory 
+      !< Remove a directory
       implicit none
       character(len=*), intent(in)    :: dirname
       character(len=FILE_NAME_LENGTH) :: rmdircmd
@@ -89,7 +89,7 @@ module dump_solution
     end subroutine purge_dump_dir
 
     subroutine make_dump_dir(control)
-      !< Solution directory and sub-directory in created with particular number 
+      !< Solution directory and sub-directory in created with particular number
       implicit none
       type(controltype), intent(in) :: control
 
@@ -118,29 +118,46 @@ module dump_solution
     end subroutine dump_data
 
     subroutine write_restart_log(files, scheme, control)
-      !< Call to write log file in the subdirectory "restart". 
+      !< Call to write log file in the subdirectory "restart".
       !< It is useful information while restarting the solver
       implicit none
       type(filetype), intent(in) :: files
       type(controltype), intent(in) :: control
       type(schemetype), intent(in) :: scheme
       open(files%RESTART_FILE_UNIT, file=files%restartfile)
-      select case (scheme%turbulence)
-          
-        case ('none')
-          write(files%RESTART_FILE_UNIT, '(A)') 'viscous'
-        case('sst','sst2003', 'kkl', 'ke', 'kw', 'sa', 'saBC', 'des-sst')
-          write(files%RESTART_FILE_UNIT, '(A)') trim(scheme%turbulence)
-        case DEFAULT
+      select case(scheme%scalar_transport)
+        case('none')
+          select case (scheme%turbulence)
+            case ('none')
+              write(files%RESTART_FILE_UNIT, '(A)') 'viscous'
+            case('sst','sst2003', 'kkl', 'ke', 'kw', 'sa', 'saBC', 'des-sst')
+              write(files%RESTART_FILE_UNIT, '(A)') trim(scheme%turbulence)
+            case DEFAULT
            Fatal_error
+          end select
+
+        case('grad_diffusion')
+          select case (scheme%turbulence)
+            case ('none')
+              write(files%RESTART_FILE_UNIT, '(A)') 'scalar/viscous'
+            case('sst','sst2003', 'kkl', 'ke', 'kw', 'sa', 'saBC', 'des-sst')
+              write(files%RESTART_FILE_UNIT, '(A)') 'scalar/'//trim(scheme%turbulence)
+            case DEFAULT
+           Fatal_error
+          end select
+
+        case DEFAULT
+          Fatal_error
       end select
+
+
       call write_initial_resnorm(files, control)
       close(files%RESTART_FILE_UNIT)
 
     end subroutine write_restart_log
 
     subroutine write_initial_resnorm(files, control)
-      !< Writing Initial resnorom in the log file to 
+      !< Writing Initial resnorom in the log file to
       !< maintian continuity of resnorm while restrarting
       implicit none
       type(filetype), intent(in) :: files

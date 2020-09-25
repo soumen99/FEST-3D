@@ -1,16 +1,16 @@
-  !< This module contains subroutine that 
+  !< This module contains subroutine that
   !< 1. check if time for resnorm dump is arrived
   !< 2. calculate resnorm
   !< 3. send those resnorm to processor number 0
-  !< 4. Recalulate resnorm based on information 
+  !< 4. Recalulate resnorm based on information
   !<    availble from all processors
   !< 5. Append the data to resnorm file
 module resnorm
-  !< This module contains subroutine that 
+  !< This module contains subroutine that
   !< 1. check if time for resnorm dump is arrived
   !< 2. calculate resnorm
   !< 3. send those resnorm to processor number 0
-  !< 4. Recalulate resnorm based on information 
+  !< 4. Recalulate resnorm based on information
   !<    availble from all processors
   !< 5. Append the data to resnorm file
   !----------------------------------------------------
@@ -28,13 +28,13 @@ module resnorm
   !< Buffer for mpi communication
   integer, parameter :: Res_itr = 3
   !< Iteration after which Res_save is stores
-  real(wp), dimension(:), allocatable :: Res_abs       
+  real(wp), dimension(:), allocatable :: Res_abs
   !< Absolute value of residual norm
-  real(wp), dimension(:), allocatable :: Res_rel       
+  real(wp), dimension(:), allocatable :: Res_rel
   !< Relative value of residual norm
-  real(wp), dimension(:), allocatable :: Res_save      
+  real(wp), dimension(:), allocatable :: Res_save
   !< Saved iteration for relative values
-  real(wp), dimension(:), allocatable :: Res_scale     
+  real(wp), dimension(:), allocatable :: Res_scale
   !< Scaling factor for normalization
 
   public :: setup_resnorm
@@ -129,6 +129,8 @@ module resnorm
       !< Setup scale required for relative and absolute
       !< residual for writing in the file.
       implicit none
+      type(controltype), intent(in) :: control
+      !to access n_var
       type(schemetype), intent(in) :: scheme
       !< finite-volume Schemes
       type(flowtype), intent(in) :: flow
@@ -162,6 +164,16 @@ module resnorm
         case('ke')
           Res_scale(6) = flow%density_inf*flow%vel_mag*flow%tk_inf
           Res_scale(7) = flow%density_inf*flow%vel_mag*flow%te_inf
+        case DEFAULT
+          Fatal_error
+      end select
+
+      select case(trim(scheme%scalar_transport))
+        case('none')
+        !do nothing
+          continue
+        case('grad_diffusion')
+          Res_scale(control%n_var) = flow%density_inf*flow%vel_mag*flow%phi_inf
         case DEFAULT
           Fatal_error
       end select
@@ -268,8 +280,15 @@ module resnorm
             write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_abs(1:5)**2))
 
           case('Turbulent_abs')
-            if(trim(scheme%turbulence)/='none')then
+            if(trim(scheme%turbulence)/='none' .and. trim(scheme%scalar_transport)=='none')then
             write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_abs(6:)**2))
+            else
+            write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_abs(6:(control%n_var)-1)**2))
+            end if
+
+          case('Scalar_abs')
+            if(trim(scheme%scalar_transport)/='none')then
+            write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_abs(control%n_var)**2))
             end if
 
           case('Continuity_abs')
@@ -297,8 +316,15 @@ module resnorm
             write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_rel(1:5)**2))
 
           case('Turbulent_rel')
-            if(trim(scheme%turbulence)/='none')then
+            if(trim(scheme%turbulence)/='none' .and. trim(scheme%scalar_transport)=='none')then
             write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_rel(6:)**2))
+            else
+            write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_rel(6:(control%n_var)-1)**2))
+            end if
+
+          case('Scalar_rel')
+            if(trim(scheme%scalar_transport)/='none')then
+            write(RESNORM_FILE_UNIT, frm, advance='no') sqrt(sum(Res_rel(control%n_var)**2))
             end if
 
           case('Continuity_rel')
@@ -341,6 +367,11 @@ module resnorm
             write(RESNORM_FILE_UNIT, frm, advance='no') Res_abs(7)
             end if
 
+          case('Phi_abs')
+            if(trim(scheme%scalar%transport) == 'grad_diffusion')then
+            write(RESNORM_FILE_UNIT, frm, advance='no') Res_abs(control%n_var)
+            end
+
           case('TKE_rel')
             if(trim(scheme%turbulence)=='sst' .or. trim(scheme%turbulence)=='kkl'.or.  trim(scheme%turbulence)=='sst2003')then
             write(RESNORM_FILE_UNIT, frm, advance='no') Res_rel(6)
@@ -365,6 +396,11 @@ module resnorm
             if(trim(scheme%turbulence)=='kkl')then
             write(RESNORM_FILE_UNIT, frm, advance='no') Res_rel(7)
             end if
+
+          case('Phi_rel')
+            if(trim(scheme%scalar%transport) == 'grad_diffusion')then
+            write(RESNORM_FILE_UNIT, frm, advance='no') Res_rel(control%n_var)
+            end
 
           case DEFAULT
             ! making absolute resnorm default

@@ -14,29 +14,30 @@ module read_output_vtk
   integer :: IN_FILE_UNIT
   integer :: imx, jmx, kmx
   integer :: i,j,k
-  real(wp), dimension(:, :, :), pointer :: density      
+  real(wp), dimension(:, :, :), pointer :: density
    !< Rho pointer, point to slice of qp (:,:,:,1)
-  real(wp), dimension(:, :, :), pointer :: x_speed      
-   !< U pointer, point to slice of qp (:,:,:,2) 
-  real(wp), dimension(:, :, :), pointer :: y_speed      
-   !< V pointer, point to slice of qp (:,:,:,3) 
-  real(wp), dimension(:, :, :), pointer :: z_speed      
+  real(wp), dimension(:, :, :), pointer :: x_speed
+   !< U pointer, point to slice of qp (:,:,:,2)
+  real(wp), dimension(:, :, :), pointer :: y_speed
+   !< V pointer, point to slice of qp (:,:,:,3)
+  real(wp), dimension(:, :, :), pointer :: z_speed
    !< W pointer, point to slice of qp (:,:,:,4)
-  real(wp), dimension(:, :, :), pointer :: pressure     
+  real(wp), dimension(:, :, :), pointer :: pressure
    !< P pointer, point to slice of qp (:,:,:,5)
-  real(wp), dimension(:, :, :), pointer :: tk        
+  real(wp), dimension(:, :, :), pointer :: tk
   !< TKE, point to slice of qp (:,:,:,6)
-  real(wp), dimension(:, :, :), pointer :: tw        
+  real(wp), dimension(:, :, :), pointer :: tw
   !< Omega, point to slice of qp (:,:,:,7)
-  real(wp), dimension(:, :, :), pointer :: te        
+  real(wp), dimension(:, :, :), pointer :: te
   !< Dissipation, point to slice of qp (:,:,:,7)
-  real(wp), dimension(:, :, :), pointer :: tv        
+  real(wp), dimension(:, :, :), pointer :: tv
   !< SA visocity, point to slice of qp (:,:,:,6)
-  real(wp), dimension(:, :, :), pointer :: tkl       
+  real(wp), dimension(:, :, :), pointer :: tkl
   !< KL K-KL method, point to slice of qp (:,:,:,7)
-  real(wp), dimension(:, :, :), pointer :: tgm       
+  real(wp), dimension(:, :, :), pointer :: tgm
   !< Intermittency of LCTM2015, point to slice of qp (:,:,:,8)
-
+  real(wp), dimension(:, :, :), pointer :: phi
+  !< Scalar
   public :: read_file
 
   contains
@@ -66,22 +67,78 @@ module read_output_vtk
       select case (trim(scheme%turbulence))
           case ("none")
               !include nothing
+          select case(trim(scheme%scalar_transport))
+
+              case ('grad_diffusion')
+                   phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 6)
+
+              case('none')
+                   !do nothing
+                   continue
+
+              case DEFAULT
+                   Fatal_error
+          end Select
+
               continue
-          
+
           case ("sst", "sst2003", "bsl", "des-sst", "kw")
               tk(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 6)
               tw(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 7)
+
 
           case ("kkl")
               tk(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 6)
               tkl(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 7)
 
+              select case(trim(scheme%scalar_transport))
+
+                   case ('grad_diffusion')
+                       phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 8)
+
+                   case('none')
+                   !do nothing
+                       continue
+
+                   case DEFAULT
+                       Fatal_error
+              end Select
+
+
           case ("sa", "saBC")
               tv(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 6)
+
+              select case(trim(scheme%scalar_transport))
+
+                    case ('grad_diffusion')
+                        phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 7)
+
+                    case('none')
+                    !do nothing
+                        continue
+
+                    case DEFAULT
+                        Fatal_error
+              end Select
+
 
           case ("ke")
               tk(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 6)
               te(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 7)
+
+              select case(trim(scheme%scalar_transport))
+
+                    case ('grad_diffusion')
+                        phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 8)
+
+                    case('none')
+                        !do nothing
+                        continue
+
+                    case DEFAULT
+                        Fatal_error
+
+              end Select
 
           case DEFAULT
             Fatal_error
@@ -92,29 +149,80 @@ module read_output_vtk
         case('lctm2015')
           tgm(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 8)
 
+          select case(trim(scheme%scalar_transport))
+
+              case ('grad_diffusion')
+                   phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 9)
+
+              case('none')
+                   !do nothing
+                   continue
+
+              case DEFAULT
+                   Fatal_error
+          end Select
+
+
+
         case('bc', 'none')
-          !do nothing
+
+        select case (trim(scheme%turbulence))
+
+              case ("sst", "sst2003", "bsl", "des-sst", "kw")
+
+              select case(trim(scheme%scalar_transport))
+
+                    case ('grad_diffusion')
+
+                        phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 8)
+
+                    case('none')
+                        !do nothing
+                        continue
+
+                    case DEFAULT
+                        Fatal_error
+
+
+              end select
+
+        end Select
+
+
+        !do nothing
           continue
 
         case DEFAULT
           Fatal_error
       end Select
 
+      !select case(trim(scheme%scalar_transport))
+      !  case('grad_diffusion')
+      !    phi(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, control%n_var)
+      !
+      !  case('none')
+      !    !do nothing
+      !    continue
+      !
+      !  case DEFAULT
+      !    Fatal_error
+      !end Select
+
       call read_header()
       call read_grid()
       do n = 1,control%r_count
 
         select case (trim(control%r_list(n)))
-        
+
           case('Velocity')
             call read_velocity()
 
           case('Density')
             call read_scalar(density, 'Density', -2)
-          
+
           case('Pressure')
             call read_scalar(pressure, 'Pressure', -2)
-            
+
           case('TKE')
             call read_scalar(tk, 'TKE', -2)
 
@@ -127,8 +235,16 @@ module read_output_vtk
           case('tv')
             call read_scalar(tv, 'tv', -2)
 
+          case('Phi')
+            call read_scalar(phi, 'Phi', -2)
+
+
           case('tgm')
             call read_scalar(tgm, 'tgm', -2)
+
+
+
+
 
           case('do not read')
             call skip_scalar()
@@ -170,7 +286,7 @@ module read_output_vtk
         end do
        end do
       end do
-      read(IN_FILE_UNIT, *) 
+      read(IN_FILE_UNIT, *)
 
     end subroutine read_grid
 
@@ -188,7 +304,7 @@ module read_output_vtk
         end do
        end do
       end do
-      read(IN_FILE_UNIT, *) 
+      read(IN_FILE_UNIT, *)
 
     end subroutine read_velocity
 
